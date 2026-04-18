@@ -1,0 +1,89 @@
+
+.login-section.data-v-809c9d48 {
+  padding-top: 20rpx;
+}
+.login-header.data-v-809c9d48 {
+  text-align: center;
+  margin-bottom: 36rpx;
+}
+.login-icon-wrap.data-v-809c9d48 {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 50%;
+  background: #DDF4FF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24rpx;
+}
+.login-icon-text.data-v-809c9d48 {
+  font-size: 64rpx;
+}
+
+/* placeholder 修复 */
+.input-placeholder.data-v-809c9d48 {
+  color: #CDCDCD;
+  font-size: 30rpx;
+  font-weight: 400;
+  line-height: 96rpx;
+  height: 96rpx;
+  overflow: visible;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+/* 二维码页面 */
+.qr-section.data-v-809c9d48 {
+  padding-top: 20rpx;
+}
+.qr-card.data-v-809c9d48 {
+  text-align: center;
+}
+.qr-status-bar.data-v-809c9d48 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24rpx;
+}
+.qr-student-name.data-v-809c9d48 {
+  font-size: 38rpx;
+  font-weight: 800;
+  color: #3c3c3c;
+}
+.qr-hint-text.data-v-809c9d48 {
+  font-size: 28rpx;
+  color: #AFAFAF;
+  font-weight: 500;
+  display: block;
+  margin-bottom: 28rpx;
+}
+.qr-code-wrap.data-v-809c9d48 {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24rpx;
+  background: #f7f7f7;
+  border-radius: 24rpx;
+  margin: 0 auto;
+  width: 520rpx;
+  height: 520rpx;
+  border: 4rpx solid #E5E5E5;
+}
+.qr-canvas.data-v-809c9d48 {
+  width: 500rpx;
+  height: 500rpx;
+}
+.qr-student-info.data-v-809c9d48 {
+  margin-top: 28rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+.qr-name-text.data-v-809c9d48 {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #3c3c3c;
+}
+.qr-phone-text.data-v-809c9d48 {
+  font-size: 28rpx;
+  color: #AFAFAF;
+}

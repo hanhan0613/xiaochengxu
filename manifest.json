@@ -1,0 +1,21 @@
+{
+    "name" : "学生签到系统",
+    "appid" : "__UNI__35C211F",
+    "description" : "基于微信云开发的学生签到小程序",
+    "versionName" : "1.0.0",
+    "versionCode" : "100",
+    "transformPx" : false,
+    "vueVersion" : "3",
+    "mp-weixin" : {
+        "appid" : "wxc977b49ec4a99643",
+        "setting" : {
+            "urlCheck" : false,
+            "es6" : true,
+            "enhance" : true,
+            "postcss" : true,
+            "minified" : true
+        },
+        "usingComponents" : true,
+        "cloudfunctionRoot" : "cloudfunctions/"
+    }
+}

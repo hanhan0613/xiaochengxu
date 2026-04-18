@@ -1,0 +1,143 @@
+
+.input-placeholder.data-v-dbc77958 {
+  color: #CDCDCD;
+  font-size: 30rpx;
+  font-weight: 400;
+  line-height: 96rpx;
+  height: 96rpx;
+  overflow: visible;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+.card-heading.data-v-dbc77958 {
+  font-size: 36rpx;
+  font-weight: 800;
+  color: #3c3c3c;
+  display: block;
+  margin-bottom: 8rpx;
+}
+.card-desc.data-v-dbc77958 {
+  font-size: 26rpx;
+  color: #AFAFAF;
+  font-weight: 500;
+  display: block;
+  margin-bottom: 28rpx;
+}
+
+/* 上传区域 */
+.upload-zone.data-v-dbc77958 {
+  border: 4rpx dashed #CDCDCD;
+  border-radius: 24rpx;
+  padding: 56rpx 32rpx;
+  text-align: center;
+  background: #f7f7f7;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12rpx;
+}
+.upload-zone-active.data-v-dbc77958 {
+  background: #E5E5E5;
+  border-color: #1CB0F6;
+}
+.upload-big-icon.data-v-dbc77958 { font-size: 72rpx;
+}
+.upload-main-text.data-v-dbc77958 {
+  font-size: 32rpx;
+  color: #1CB0F6;
+  font-weight: 700;
+}
+.upload-sub-text.data-v-dbc77958 {
+  font-size: 24rpx;
+  color: #CDCDCD;
+}
+
+/* 文件标签 */
+.file-tag.data-v-dbc77958 {
+  margin-top: 20rpx;
+  padding: 20rpx 24rpx;
+  background: #DDF4FF;
+  border-radius: 16rpx;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 4rpx solid #1CB0F6;
+}
+.file-tag-name.data-v-dbc77958 {
+  font-size: 28rpx;
+  color: #1CB0F6;
+  font-weight: 700;
+}
+.file-tag-size.data-v-dbc77958 {
+  font-size: 24rpx;
+  color: #AFAFAF;
+}
+
+/* 预览表格 */
+.preview-area.data-v-dbc77958 { margin-top: 32rpx;
+}
+.preview-heading.data-v-dbc77958 {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #3c3c3c;
+  margin-bottom: 16rpx;
+  display: block;
+}
+.preview-tbl.data-v-dbc77958 {
+  border: 4rpx solid #E5E5E5;
+  border-radius: 16rpx;
+  overflow: hidden;
+  margin-bottom: 20rpx;
+}
+.preview-tbl-head.data-v-dbc77958 {
+  display: flex;
+  background: #f7f7f7;
+  padding: 18rpx 16rpx;
+  font-weight: 700;
+  font-size: 26rpx;
+  color: #AFAFAF;
+}
+.preview-tbl-row.data-v-dbc77958 {
+  display: flex;
+  padding: 18rpx 16rpx;
+  border-top: 2rpx solid #E5E5E5;
+  font-size: 26rpx;
+}
+.preview-cell.data-v-dbc77958 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cell-idx.data-v-dbc77958 { width: 60rpx; flex-shrink: 0; color: #AFAFAF;
+}
+.cell-name.data-v-dbc77958 { flex: 1; min-width: 0; font-weight: 600;
+}
+.cell-phone.data-v-dbc77958 { width: 240rpx; flex-shrink: 0; text-align: right; color: #777;
+}
+.preview-tbl-more.data-v-dbc77958 {
+  text-align: center;
+  padding: 16rpx;
+  color: #AFAFAF;
+  font-size: 24rpx;
+  border-top: 2rpx solid #E5E5E5;
+}
+
+/* 危险按钮 */
+.btn-danger.data-v-dbc77958 {
+  background: #fff;
+  color: #FF4B4B;
+  border: 4rpx solid #FF4B4B;
+  border-radius: 24rpx;
+  padding: 26rpx 0;
+  font-size: 34rpx;
+  font-weight: 700;
+  text-align: center;
+  width: 100%;
+  margin-top: 20rpx;
+  box-shadow: 0 8rpx 0 #FFD4D4;
+  position: relative;
+  top: 0;
+}
+.btn-danger.data-v-dbc77958:active {
+  top: 6rpx;
+  box-shadow: 0 2rpx 0 #FFD4D4;
+}

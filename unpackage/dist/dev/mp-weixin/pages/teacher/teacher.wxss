@@ -1,0 +1,242 @@
+
+/* 统计卡片 */
+.stats-row.data-v-c604c94d {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 28rpx;
+}
+.stat-card.data-v-c604c94d {
+  flex: 1;
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 28rpx 16rpx;
+  text-align: center;
+  border: 4rpx solid #E5E5E5;
+}
+.stat-total.data-v-c604c94d { border-color: #1CB0F6;
+}
+.stat-yes.data-v-c604c94d { border-color: #58CC02;
+}
+.stat-no.data-v-c604c94d { border-color: #FF4B4B;
+}
+.stat-num.data-v-c604c94d {
+  font-size: 52rpx;
+  font-weight: 800;
+  display: block;
+}
+.stat-total .stat-num.data-v-c604c94d { color: #1CB0F6;
+}
+.stat-yes .stat-num.data-v-c604c94d { color: #58CC02;
+}
+.stat-no .stat-num.data-v-c604c94d { color: #FF4B4B;
+}
+.stat-lbl.data-v-c604c94d {
+  font-size: 24rpx;
+  color: #AFAFAF;
+  font-weight: 600;
+  margin-top: 4rpx;
+  display: block;
+}
+
+/* 进度条 */
+.progress-wrap.data-v-c604c94d {
+  margin-bottom: 28rpx;
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+.progress-bar.data-v-c604c94d {
+  flex: 1;
+  height: 20rpx;
+  background: #E5E5E5;
+  border-radius: 10rpx;
+  overflow: hidden;
+}
+.progress-fill.data-v-c604c94d {
+  height: 100%;
+  background: #58CC02;
+  border-radius: 10rpx;
+  transition: width 0.5s;
+}
+.progress-text.data-v-c604c94d {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #58CC02;
+  flex-shrink: 0;
+}
+
+/* 扫码按钮 */
+.btn-scan.data-v-c604c94d {
+  background: #1CB0F6;
+  color: #fff;
+  border: none;
+  border-radius: 24rpx;
+  padding: 30rpx 0;
+  font-size: 36rpx;
+  font-weight: 700;
+  text-align: center;
+  width: 100%;
+  margin-bottom: 28rpx;
+  box-shadow: 0 8rpx 0 #1899D6;
+  position: relative;
+  top: 0;
+  letter-spacing: 4rpx;
+}
+.btn-scan.data-v-c604c94d:active {
+  top: 6rpx;
+  box-shadow: 0 2rpx 0 #1899D6;
+}
+
+/* 签到结果 */
+.result-banner.data-v-c604c94d {
+  border-radius: 20rpx;
+  padding: 28rpx 32rpx;
+  margin-bottom: 28rpx;
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+.result-ok.data-v-c604c94d {
+  background: #D7FFB8;
+  border: 4rpx solid #58CC02;
+}
+.result-err.data-v-c604c94d {
+  background: #FFE0E0;
+  border: 4rpx solid #FF4B4B;
+}
+.result-emoji.data-v-c604c94d {
+  font-size: 44rpx;
+  flex-shrink: 0;
+}
+.result-info.data-v-c604c94d {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.result-msg-text.data-v-c604c94d {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #3c3c3c;
+}
+.result-name-text.data-v-c604c94d {
+  font-size: 26rpx;
+  color: #777;
+  margin-top: 4rpx;
+}
+
+/* 筛选 */
+.filter-row.data-v-c604c94d {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 28rpx;
+}
+.filter-pill.data-v-c604c94d {
+  flex: 1;
+  text-align: center;
+  padding: 18rpx;
+  border-radius: 20rpx;
+  font-size: 28rpx;
+  font-weight: 700;
+  background: #fff;
+  color: #AFAFAF;
+  border: 4rpx solid #E5E5E5;
+}
+.pill-active.data-v-c604c94d {
+  background: #1CB0F6;
+  color: #fff;
+  border-color: #1CB0F6;
+  box-shadow: 0 4rpx 0 #1899D6;
+}
+
+/* 学生列表 */
+.stu-list.data-v-c604c94d {
+  margin-top: 8rpx;
+}
+.stu-item.data-v-c604c94d {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 28rpx 28rpx;
+  margin-bottom: 16rpx;
+  display: flex;
+  align-items: center;
+  border: 4rpx solid #E5E5E5;
+}
+.stu-avatar.data-v-c604c94d {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 24rpx;
+  flex-shrink: 0;
+}
+.avatar-ok.data-v-c604c94d { background: #D7FFB8;
+}
+.avatar-wait.data-v-c604c94d { background: #E5E5E5;
+}
+.stu-avatar-letter.data-v-c604c94d {
+  font-size: 36rpx;
+  font-weight: 800;
+  color: #3c3c3c;
+}
+.stu-info.data-v-c604c94d {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.stu-name.data-v-c604c94d {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #3c3c3c;
+}
+.stu-phone.data-v-c604c94d {
+  font-size: 24rpx;
+  color: #AFAFAF;
+  margin-top: 4rpx;
+}
+.stu-status.data-v-c604c94d {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8rpx;
+  flex-shrink: 0;
+}
+.stu-time.data-v-c604c94d {
+  font-size: 22rpx;
+  color: #AFAFAF;
+}
+
+/* 空状态 */
+.empty-state.data-v-c604c94d {
+  text-align: center;
+  padding: 80rpx 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12rpx;
+}
+.empty-emoji.data-v-c604c94d {
+  font-size: 80rpx;
+}
+.empty-title.data-v-c604c94d {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #AFAFAF;
+}
+.empty-sub-text.data-v-c604c94d {
+  font-size: 26rpx;
+  color: #CDCDCD;
+}
+
+/* 加载更多 */
+.load-more-wrap.data-v-c604c94d {
+  text-align: center;
+  padding: 32rpx;
+}
+.load-more-text.data-v-c604c94d {
+  color: #1CB0F6;
+  font-size: 28rpx;
+  font-weight: 700;
+}

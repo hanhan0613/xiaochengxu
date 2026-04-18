@@ -1,0 +1,61 @@
+{
+  "cloud": true,
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "签到打卡"
+      }
+    },
+    {
+      "path": "pages/student/student",
+      "style": {
+        "navigationBarTitleText": "学生签到"
+      }
+    },
+    {
+      "path": "pages/teacher/teacher",
+      "style": {
+        "navigationBarTitleText": "教师端",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/admin/admin",
+      "style": {
+        "navigationBarTitleText": "管理后台"
+      }
+    }
+  ],
+  "globalStyle": {
+    "backgroundColor": "#f7f7f7",
+    "backgroundTextStyle": "dark",
+    "navigationBarBackgroundColor": "#58CC02",
+    "navigationBarTitleText": "签到打卡",
+    "navigationBarTextStyle": "white"
+  },
+  "tabBar": {
+    "color": "#AFAFAF",
+    "selectedColor": "#58CC02",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/student/student",
+        "text": "学生签到"
+      },
+      {
+        "pagePath": "pages/teacher/teacher",
+        "text": "教师扫码"
+      },
+      {
+        "pagePath": "pages/admin/admin",
+        "text": "管理后台"
+      }
+    ]
+  }
+}
