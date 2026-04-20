@@ -1,138 +1,197 @@
 
+/* ========== 色彩系统（蓝色主题） ========== */
 page {
-  background-color: #f7f7f7;
+  /* 主色 */
+  --primary:        #1CB0F6;
+  --primary-dark:   #0E8CBF;
+  --primary-deep:   #4F46E5;
+  --primary-light:  #7BDCFF;
+  --primary-bg:     #E0F3FF;
+
+  /* 功能色 */
+  --success:        #22C55E;
+  --success-bg:     #DCFCE7;
+  --warning:        #F59E0B;
+  --warning-bg:     #FEF3C7;
+  --danger:         #EF4444;
+  --danger-bg:      #FEE2E2;
+
+  /* 中性色 */
+  --bg:             #F1F7FD;
+  --card-bg:        #FFFFFF;
+  --border:         #E2E8F0;
+  --border-strong:  #CBD5E1;
+  --text-primary:   #0F172A;
+  --text-secondary: #64748B;
+  --text-placeholder: #94A3B8;
+
+  /* 阴影 */
+  --shadow-sm:  0 2rpx 8rpx rgba(15, 23, 42, 0.04);
+  --shadow-md:  0 8rpx 24rpx rgba(15, 23, 42, 0.06);
+  --shadow-lg:  0 16rpx 40rpx rgba(15, 23, 42, 0.08);
+
+  background: linear-gradient(180deg, #EAF4FE 0%, #F1F7FD 30%, #F8FAFC 100%);
+  background-attachment: fixed;
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
   font-size: 28rpx;
-  color: #3c3c3c;
+  color: var(--text-primary);
   box-sizing: border-box;
 }
-
-/* ========== Duolingo 全局样式 ========== */
 .container {
-  padding: 32rpx;
+  padding: 32rpx 28rpx 48rpx;
   min-height: 100vh;
 }
 
-/* 主按钮 - 3D 凸起效果 */
+/* ========== 主按钮 - 蓝色渐变 + 柔和阴影 ========== */
 .btn-primary {
-  background: #58CC02;
+  background: linear-gradient(135deg, #1CB0F6 0%, #4F46E5 100%);
   color: #fff;
   border: none;
-  border-radius: 24rpx;
-  padding: 28rpx 0;
+  border-radius: 28rpx;
+  padding: 30rpx 0;
   font-size: 34rpx;
   font-weight: 700;
   text-align: center;
+  line-height: 1.2;
   width: 100%;
-  margin-top: 30rpx;
-  box-shadow: 0 8rpx 0 #46A302;
+  margin-top: 32rpx;
+  box-shadow: 0 10rpx 24rpx rgba(28, 176, 246, 0.35),
+              0 4rpx 0 #0E8CBF;
   letter-spacing: 2rpx;
   position: relative;
   top: 0;
-  transition: all 0.1s;
+  transition: all 0.18s ease;
 }
 .btn-primary:active {
-  top: 6rpx;
-  box-shadow: 0 2rpx 0 #46A302;
+  top: 4rpx;
+  box-shadow: 0 4rpx 12rpx rgba(28, 176, 246, 0.25),
+              0 2rpx 0 #0E8CBF;
 }
 .btn-primary[disabled] {
-  background: #E5E5E5;
-  color: #AFAFAF;
-  box-shadow: 0 8rpx 0 #CDCDCD;
+  background: #E2E8F0;
+  color: #94A3B8;
+  box-shadow: 0 4rpx 0 #CBD5E1;
 }
 
-/* 次按钮 */
+/* ========== 次按钮 ========== */
 .btn-secondary {
   background: #fff;
-  color: #1CB0F6;
-  border: 4rpx solid #E5E5E5;
-  border-radius: 24rpx;
-  padding: 26rpx 0;
-  font-size: 34rpx;
+  color: var(--primary);
+  border: 3rpx solid var(--border);
+  border-radius: 28rpx;
+  padding: 28rpx 0;
+  font-size: 32rpx;
   font-weight: 700;
   text-align: center;
+  line-height: 1.2;
   width: 100%;
   margin-top: 20rpx;
-  box-shadow: 0 8rpx 0 #E5E5E5;
+  box-shadow: var(--shadow-sm);
   position: relative;
   top: 0;
+  transition: all 0.18s ease;
 }
 .btn-secondary:active {
-  top: 6rpx;
-  box-shadow: 0 2rpx 0 #E5E5E5;
+  top: 2rpx;
+  background: var(--primary-bg);
+  border-color: var(--primary-light);
+  color: var(--primary-dark);
 }
 
-/* 输入框 */
+/* ========== 输入框 ========== */
 .input-group {
   margin-bottom: 28rpx;
 }
 .input-label {
-  font-size: 26rpx;
-  color: #AFAFAF;
+  font-size: 24rpx;
+  color: var(--text-secondary);
   font-weight: 700;
-  text-transform: uppercase;
   letter-spacing: 2rpx;
-  margin-bottom: 12rpx;
+  margin-bottom: 14rpx;
   display: block;
+  text-transform: uppercase;
 }
 .input-field {
   background: #fff;
-  border: 4rpx solid #E5E5E5;
-  border-radius: 20rpx;
-  padding: 0 24rpx;
+  border: 3rpx solid var(--border);
+  border-radius: 24rpx;
+  padding: 0 28rpx;
   height: 96rpx;
   line-height: 96rpx;
   font-size: 32rpx;
   font-weight: 500;
   width: 100%;
   box-sizing: border-box;
-  color: #3c3c3c;
+  color: var(--text-primary);
   overflow: visible;
+  box-shadow: inset 0 2rpx 4rpx rgba(15, 23, 42, 0.02);
+  transition: all 0.18s ease;
 }
 .input-field:focus {
-  border-color: #1CB0F6;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 6rpx rgba(28, 176, 246, 0.15);
 }
 
-/* 卡片 */
+/* ========== 卡片 ========== */
 .card {
-  background: #fff;
-  border-radius: 24rpx;
-  padding: 36rpx;
+  background: var(--card-bg);
+  border-radius: 32rpx;
+  padding: 40rpx 36rpx;
   margin-bottom: 28rpx;
-  border: 4rpx solid #E5E5E5;
+  border: 2rpx solid var(--border);
+  box-shadow: var(--shadow-md);
 }
 
-/* 标签 */
+/* ========== 状态标签 ========== */
 .tag-checked {
-  display: inline-block;
-  background: #58CC02;
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  background: linear-gradient(135deg, #22C55E, #16A34A);
   color: #fff;
-  font-size: 24rpx;
+  font-size: 22rpx;
   font-weight: 700;
   padding: 8rpx 20rpx;
-  border-radius: 16rpx;
+  border-radius: 999rpx;
+  box-shadow: 0 4rpx 12rpx rgba(34, 197, 94, 0.3);
+}
+.tag-checked::before {
+  content: '✓';
+  font-size: 22rpx;
+  font-weight: 900;
 }
 .tag-unchecked {
-  display: inline-block;
-  background: #FF4B4B;
-  color: #fff;
-  font-size: 24rpx;
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  background: var(--card-bg);
+  color: var(--text-secondary);
+  font-size: 22rpx;
   font-weight: 700;
   padding: 8rpx 20rpx;
-  border-radius: 16rpx;
+  border-radius: 999rpx;
+  border: 2rpx solid var(--border);
+}
+.tag-unchecked::before {
+  content: '';
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background: var(--text-placeholder);
 }
 
-/* 页面标题 */
+/* ========== 页面标题 ========== */
 .page-title {
   font-size: 48rpx;
   font-weight: 800;
-  color: #3c3c3c;
-  margin-bottom: 8rpx;
+  color: var(--text-primary);
+  margin-bottom: 10rpx;
   display: block;
+  letter-spacing: -0.5rpx;
 }
 .page-subtitle {
-  font-size: 28rpx;
-  color: #AFAFAF;
+  font-size: 26rpx;
+  color: var(--text-secondary);
   font-weight: 500;
   margin-bottom: 40rpx;
   display: block;

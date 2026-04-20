@@ -25,37 +25,19 @@
       "style": {
         "navigationBarTitleText": "管理后台"
       }
+    },
+    {
+      "path": "pages/sessions/sessions",
+      "style": {
+        "navigationBarTitleText": "历史签到"
+      }
     }
   ],
   "globalStyle": {
-    "backgroundColor": "#f7f7f7",
+    "backgroundColor": "#F1F7FD",
     "backgroundTextStyle": "dark",
-    "navigationBarBackgroundColor": "#58CC02",
+    "navigationBarBackgroundColor": "#1CB0F6",
     "navigationBarTitleText": "签到打卡",
     "navigationBarTextStyle": "white"
-  },
-  "tabBar": {
-    "color": "#AFAFAF",
-    "selectedColor": "#58CC02",
-    "backgroundColor": "#ffffff",
-    "borderStyle": "black",
-    "list": [
-      {
-        "pagePath": "pages/index/index",
-        "text": "首页"
-      },
-      {
-        "pagePath": "pages/student/student",
-        "text": "学生签到"
-      },
-      {
-        "pagePath": "pages/teacher/teacher",
-        "text": "教师扫码"
-      },
-      {
-        "pagePath": "pages/admin/admin",
-        "text": "管理后台"
-      }
-    ]
   }
 }

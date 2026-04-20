@@ -79,17 +79,16 @@
       </button>
     </view>
 
-    <!-- 数据管理 -->
-    <view class="card">
-      <text class="card-heading">数据管理</text>
-      <button class="btn-secondary" @click="resetAllCheckIn">重置所有签到状态</button>
-      <button class="btn-danger" @click="clearAllStudents">清空所有学生数据</button>
+    <!-- 提示：数据重置入口在教师端 -->
+    <view class="card hint-card">
+      <text class="hint-title">需要重置或清空数据？</text>
+      <text class="hint-desc">请回到"教师端"使用"开启新一轮签到"功能，可选择是否清空学生名单。这样保证历史活动数据不受影响。</text>
     </view>
   </view>
 </template>
 
 <script>
-import XLSX from '@/utils/xlsx.mini.js'
+import * as XLSX from 'xlsx'
 
 export default {
   data() {
@@ -104,7 +103,39 @@ export default {
     }
   },
 
+  async onShow() {
+    // 鉴权：非教师直接踢出
+    const ok = await this.ensureTeacher()
+    if (!ok) return
+  },
+
   methods: {
+    async ensureTeacher() {
+      let role = uni.getStorageSync('role')
+      if (role !== 'teacher') {
+        try {
+          const res = await wx.cloud.callFunction({ name: 'getRole' })
+          const r = res && res.result ? res.result : {}
+          role = r.role
+          if (role === 'teacher') uni.setStorageSync('role', 'teacher')
+        } catch (err) {
+          console.error(err)
+        }
+      }
+      if (role !== 'teacher') {
+        uni.showModal({
+          title: '无权限',
+          content: '管理后台仅限授权教师访问',
+          showCancel: false,
+          success: () => {
+            uni.reLaunch({ url: '/pages/index/index' })
+          }
+        })
+        return false
+      }
+      return true
+    },
+
     chooseExcel() {
       wx.chooseMessageFile({
         count: 1,
@@ -135,8 +166,10 @@ export default {
       uni.showLoading({ title: '解析中...' })
 
       try {
-        const fileData = wx.getFileSystemManager().readFileSync(filePath)
-        const workbook = XLSX.read(fileData, { type: 'array' })
+        const raw = wx.getFileSystemManager().readFileSync(filePath)
+        // readFileSync 不传 encoding 时返回 ArrayBuffer；SheetJS 要 Uint8Array
+        const data8 = raw instanceof ArrayBuffer ? new Uint8Array(raw) : new Uint8Array(raw.buffer || raw)
+        const workbook = XLSX.read(data8, { type: 'array' })
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
         const data = XLSX.utils.sheet_to_json(firstSheet, { defval: '' })
 
@@ -255,74 +288,13 @@ export default {
       this.isAdding = false
     },
 
-    resetAllCheckIn() {
-      uni.showModal({
-        title: '确认重置',
-        content: '将所有学生的签到状态重置为"未签到"，确定继续？',
-        success: async (res) => {
-          if (res.confirm) {
-            uni.showLoading({ title: '重置中...' })
-            try {
-              const db = wx.cloud.database()
-              const result = await db.collection('students')
-                .where({ checkedIn: true }).get()
-
-              for (const student of result.data) {
-                await db.collection('students').doc(student._id).update({
-                  data: {
-                    checkedIn: false,
-                    checkInTime: null,
-                    updateTime: db.serverDate()
-                  }
-                })
-              }
-
-              uni.hideLoading()
-              uni.showToast({ title: '重置成功', icon: 'success' })
-            } catch (err) {
-              uni.hideLoading()
-              console.error(err)
-              uni.showToast({ title: '重置失败', icon: 'none' })
-            }
-          }
-        }
-      })
-    },
-
-    clearAllStudents() {
-      uni.showModal({
-        title: '危险操作',
-        content: '将删除所有学生数据，此操作不可恢复！确定继续？',
-        confirmColor: '#FF4B4B',
-        success: async (res) => {
-          if (res.confirm) {
-            uni.showLoading({ title: '删除中...' })
-            try {
-              const db = wx.cloud.database()
-              const result = await db.collection('students').get()
-
-              for (const student of result.data) {
-                await db.collection('students').doc(student._id).remove()
-              }
-
-              uni.hideLoading()
-              uni.showToast({ title: '已清空', icon: 'success' })
-            } catch (err) {
-              uni.hideLoading()
-              console.error(err)
-              uni.showToast({ title: '删除失败', icon: 'none' })
-            }
-          }
-        }
-      })
-    }
   }
 }
 </script>
 
 <style scoped>
 .input-placeholder {
-  color: #CDCDCD;
+  color: var(--text-placeholder);
   font-size: 30rpx;
   font-weight: 400;
   line-height: 96rpx;
@@ -334,105 +306,128 @@ export default {
 .card-heading {
   font-size: 36rpx;
   font-weight: 800;
-  color: #3c3c3c;
+  color: var(--text-primary);
   display: block;
-  margin-bottom: 8rpx;
+  margin-bottom: 10rpx;
+  letter-spacing: -0.5rpx;
 }
 
 .card-desc {
-  font-size: 26rpx;
-  color: #AFAFAF;
+  font-size: 24rpx;
+  color: var(--text-secondary);
   font-weight: 500;
   display: block;
-  margin-bottom: 28rpx;
+  margin-bottom: 32rpx;
+  line-height: 1.5;
 }
 
-/* 上传区域 */
+/* ========== 上传区域 ========== */
 .upload-zone {
-  border: 4rpx dashed #CDCDCD;
-  border-radius: 24rpx;
+  border: 3rpx dashed var(--primary-light);
+  border-radius: 28rpx;
   padding: 56rpx 32rpx;
   text-align: center;
-  background: #f7f7f7;
+  background: linear-gradient(135deg, #F0F9FF 0%, #E0F3FF 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12rpx;
+  gap: 14rpx;
+  transition: all 0.2s ease;
 }
 
 .upload-zone-active {
-  background: #E5E5E5;
-  border-color: #1CB0F6;
+  background: linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%);
+  border-color: var(--primary);
+  transform: scale(0.99);
 }
 
-.upload-big-icon { font-size: 72rpx; }
+.upload-big-icon {
+  font-size: 80rpx;
+  line-height: 1;
+  display: block;
+  filter: drop-shadow(0 4rpx 8rpx rgba(28, 176, 246, 0.2));
+}
 
 .upload-main-text {
   font-size: 32rpx;
-  color: #1CB0F6;
+  color: var(--primary-dark);
   font-weight: 700;
 }
 
 .upload-sub-text {
-  font-size: 24rpx;
-  color: #CDCDCD;
+  font-size: 22rpx;
+  color: var(--text-placeholder);
 }
 
-/* 文件标签 */
+/* ========== 文件标签 ========== */
 .file-tag {
-  margin-top: 20rpx;
-  padding: 20rpx 24rpx;
-  background: #DDF4FF;
-  border-radius: 16rpx;
+  margin-top: 24rpx;
+  padding: 22rpx 26rpx;
+  background: linear-gradient(135deg, #E0F3FF 0%, #DBEAFE 100%);
+  border-radius: 20rpx;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border: 4rpx solid #1CB0F6;
+  border: 2rpx solid var(--primary-light);
+  box-shadow: 0 4rpx 12rpx rgba(28, 176, 246, 0.1);
 }
 
 .file-tag-name {
   font-size: 28rpx;
-  color: #1CB0F6;
+  color: var(--primary-dark);
   font-weight: 700;
 }
 
 .file-tag-size {
-  font-size: 24rpx;
-  color: #AFAFAF;
+  font-size: 22rpx;
+  color: var(--text-secondary);
+  background: #fff;
+  padding: 4rpx 14rpx;
+  border-radius: 999rpx;
+  font-weight: 600;
 }
 
-/* 预览表格 */
-.preview-area { margin-top: 32rpx; }
+/* ========== 预览表格 ========== */
+.preview-area { margin-top: 36rpx; }
 
 .preview-heading {
-  font-size: 28rpx;
+  font-size: 26rpx;
   font-weight: 700;
-  color: #3c3c3c;
-  margin-bottom: 16rpx;
+  color: var(--text-primary);
+  margin-bottom: 18rpx;
   display: block;
+  letter-spacing: 0.5rpx;
 }
 
 .preview-tbl {
-  border: 4rpx solid #E5E5E5;
-  border-radius: 16rpx;
+  border: 2rpx solid var(--border);
+  border-radius: 20rpx;
   overflow: hidden;
-  margin-bottom: 20rpx;
+  margin-bottom: 24rpx;
+  box-shadow: var(--shadow-sm);
 }
 
 .preview-tbl-head {
   display: flex;
-  background: #f7f7f7;
-  padding: 18rpx 16rpx;
+  background: linear-gradient(135deg, #F8FAFC, #F1F5F9);
+  padding: 20rpx 18rpx;
   font-weight: 700;
-  font-size: 26rpx;
-  color: #AFAFAF;
+  font-size: 24rpx;
+  color: var(--text-secondary);
+  letter-spacing: 1rpx;
+  text-transform: uppercase;
 }
 
 .preview-tbl-row {
   display: flex;
-  padding: 18rpx 16rpx;
-  border-top: 2rpx solid #E5E5E5;
+  padding: 20rpx 18rpx;
+  border-top: 2rpx solid var(--border);
   font-size: 26rpx;
+  background: #fff;
+}
+
+.preview-tbl-row:nth-child(even) {
+  background: #FAFBFC;
 }
 
 .preview-cell {
@@ -441,37 +436,41 @@ export default {
   white-space: nowrap;
 }
 
-.cell-idx { width: 60rpx; flex-shrink: 0; color: #AFAFAF; }
-.cell-name { flex: 1; min-width: 0; font-weight: 600; }
-.cell-phone { width: 240rpx; flex-shrink: 0; text-align: right; color: #777; }
+.cell-idx  { width: 60rpx;  flex-shrink: 0; color: var(--text-placeholder); font-weight: 600; }
+.cell-name { flex: 1; min-width: 0; font-weight: 600; color: var(--text-primary); }
+.cell-phone {
+  width: 240rpx; flex-shrink: 0; text-align: right;
+  color: var(--text-secondary); letter-spacing: 1rpx;
+}
 
 .preview-tbl-more {
   text-align: center;
-  padding: 16rpx;
-  color: #AFAFAF;
-  font-size: 24rpx;
-  border-top: 2rpx solid #E5E5E5;
+  padding: 18rpx;
+  color: var(--text-placeholder);
+  font-size: 22rpx;
+  border-top: 2rpx solid var(--border);
+  background: #FAFBFC;
 }
 
-/* 危险按钮 */
-.btn-danger {
-  background: #fff;
-  color: #FF4B4B;
-  border: 4rpx solid #FF4B4B;
-  border-radius: 24rpx;
-  padding: 26rpx 0;
-  font-size: 34rpx;
+/* ========== 提示卡片 ========== */
+.hint-card {
+  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+  border: 2rpx solid #93C5FD;
+  box-shadow: 0 4rpx 12rpx rgba(28, 176, 246, 0.08);
+}
+
+.hint-title {
+  font-size: 28rpx;
   font-weight: 700;
-  text-align: center;
-  width: 100%;
-  margin-top: 20rpx;
-  box-shadow: 0 8rpx 0 #FFD4D4;
-  position: relative;
-  top: 0;
+  color: var(--primary-deep);
+  display: block;
+  margin-bottom: 12rpx;
 }
 
-.btn-danger:active {
-  top: 6rpx;
-  box-shadow: 0 2rpx 0 #FFD4D4;
+.hint-desc {
+  font-size: 24rpx;
+  color: var(--text-secondary);
+  display: block;
+  line-height: 1.6;
 }
 </style>

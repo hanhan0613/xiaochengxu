@@ -1,0 +1,9 @@
+{
+  "name": "listSessions",
+  "version": "1.0.0",
+  "description": "列出所有历史签到活动",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

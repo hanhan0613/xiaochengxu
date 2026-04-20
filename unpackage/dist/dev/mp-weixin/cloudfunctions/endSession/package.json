@@ -1,0 +1,9 @@
+{
+  "name": "endSession",
+  "version": "1.0.0",
+  "description": "结束当前签到活动",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

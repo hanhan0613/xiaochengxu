@@ -1,0 +1,9 @@
+{
+  "name": "deleteSession",
+  "version": "1.0.0",
+  "description": "删除指定签到活动及流水",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

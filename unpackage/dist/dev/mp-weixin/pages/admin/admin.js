@@ -1,6 +1,5 @@
 "use strict";
 const common_vendor = require("../../common/vendor.js");
-const utils_xlsx_mini = require("../../utils/xlsx.mini.js");
 const _sfc_main = {
   data() {
     return {
@@ -13,7 +12,38 @@ const _sfc_main = {
       isAdding: false
     };
   },
+  async onShow() {
+    const ok = await this.ensureTeacher();
+    if (!ok)
+      return;
+  },
   methods: {
+    async ensureTeacher() {
+      let role = common_vendor.index.getStorageSync("role");
+      if (role !== "teacher") {
+        try {
+          const res = await common_vendor.wx$1.cloud.callFunction({ name: "getRole" });
+          const r = res && res.result ? res.result : {};
+          role = r.role;
+          if (role === "teacher")
+            common_vendor.index.setStorageSync("role", "teacher");
+        } catch (err) {
+          common_vendor.index.__f__("error", "at pages/admin/admin.vue:122", err);
+        }
+      }
+      if (role !== "teacher") {
+        common_vendor.index.showModal({
+          title: "无权限",
+          content: "管理后台仅限授权教师访问",
+          showCancel: false,
+          success: () => {
+            common_vendor.index.reLaunch({ url: "/pages/index/index" });
+          }
+        });
+        return false;
+      }
+      return true;
+    },
     chooseExcel() {
       common_vendor.wx$1.chooseMessageFile({
         count: 1,
@@ -40,10 +70,11 @@ const _sfc_main = {
     parseExcel(filePath) {
       common_vendor.index.showLoading({ title: "解析中..." });
       try {
-        const fileData = common_vendor.wx$1.getFileSystemManager().readFileSync(filePath);
-        const workbook = utils_xlsx_mini.XLSX.read(fileData, { type: "array" });
+        const raw = common_vendor.wx$1.getFileSystemManager().readFileSync(filePath);
+        const data8 = raw instanceof ArrayBuffer ? new Uint8Array(raw) : new Uint8Array(raw.buffer || raw);
+        const workbook = common_vendor.readSync(data8, { type: "array" });
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const data = utils_xlsx_mini.XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
+        const data = common_vendor.utils.sheet_to_json(firstSheet, { defval: "" });
         if (data.length === 0) {
           common_vendor.index.hideLoading();
           common_vendor.index.showToast({ title: "Excel文件为空", icon: "none" });
@@ -76,7 +107,7 @@ const _sfc_main = {
         common_vendor.index.showToast({ title: `解析到 ${students.length} 条数据`, icon: "success" });
       } catch (err) {
         common_vendor.index.hideLoading();
-        common_vendor.index.__f__("error", "at pages/admin/admin.vue:184", "解析Excel失败:", err);
+        common_vendor.index.__f__("error", "at pages/admin/admin.vue:217", "解析Excel失败:", err);
         common_vendor.index.showToast({ title: "解析失败，请检查文件格式", icon: "none", duration: 2e3 });
       }
     },
@@ -105,7 +136,7 @@ const _sfc_main = {
         }
       } catch (err) {
         common_vendor.index.hideLoading();
-        common_vendor.index.__f__("error", "at pages/admin/admin.vue:216", "上传失败:", err);
+        common_vendor.index.__f__("error", "at pages/admin/admin.vue:249", "上传失败:", err);
         common_vendor.index.showToast({ title: "上传失败，请重试", icon: "none" });
       }
       this.isUploading = false;
@@ -135,71 +166,16 @@ const _sfc_main = {
           common_vendor.index.showToast({ title: res.result.message || "添加失败", icon: "none" });
         }
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/admin/admin.vue:251", err);
+        common_vendor.index.__f__("error", "at pages/admin/admin.vue:284", err);
         common_vendor.index.showToast({ title: "添加失败", icon: "none" });
       }
       this.isAdding = false;
-    },
-    resetAllCheckIn() {
-      common_vendor.index.showModal({
-        title: "确认重置",
-        content: '将所有学生的签到状态重置为"未签到"，确定继续？',
-        success: async (res) => {
-          if (res.confirm) {
-            common_vendor.index.showLoading({ title: "重置中..." });
-            try {
-              const db = common_vendor.wx$1.cloud.database();
-              const result = await db.collection("students").where({ checkedIn: true }).get();
-              for (const student of result.data) {
-                await db.collection("students").doc(student._id).update({
-                  data: {
-                    checkedIn: false,
-                    checkInTime: null,
-                    updateTime: db.serverDate()
-                  }
-                });
-              }
-              common_vendor.index.hideLoading();
-              common_vendor.index.showToast({ title: "重置成功", icon: "success" });
-            } catch (err) {
-              common_vendor.index.hideLoading();
-              common_vendor.index.__f__("error", "at pages/admin/admin.vue:284", err);
-              common_vendor.index.showToast({ title: "重置失败", icon: "none" });
-            }
-          }
-        }
-      });
-    },
-    clearAllStudents() {
-      common_vendor.index.showModal({
-        title: "危险操作",
-        content: "将删除所有学生数据，此操作不可恢复！确定继续？",
-        confirmColor: "#FF4B4B",
-        success: async (res) => {
-          if (res.confirm) {
-            common_vendor.index.showLoading({ title: "删除中..." });
-            try {
-              const db = common_vendor.wx$1.cloud.database();
-              const result = await db.collection("students").get();
-              for (const student of result.data) {
-                await db.collection("students").doc(student._id).remove();
-              }
-              common_vendor.index.hideLoading();
-              common_vendor.index.showToast({ title: "已清空", icon: "success" });
-            } catch (err) {
-              common_vendor.index.hideLoading();
-              common_vendor.index.__f__("error", "at pages/admin/admin.vue:312", err);
-              common_vendor.index.showToast({ title: "删除失败", icon: "none" });
-            }
-          }
-        }
-      });
     }
   }
 };
 function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
   return common_vendor.e({
-    a: common_vendor.o((...args) => $options.chooseExcel && $options.chooseExcel(...args), "b5"),
+    a: common_vendor.o((...args) => $options.chooseExcel && $options.chooseExcel(...args), "71"),
     b: $data.selectedFile
   }, $data.selectedFile ? {
     c: common_vendor.t($data.selectedFile.name),
@@ -221,18 +197,16 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
     i: common_vendor.t($data.parsedStudents.length)
   } : {}, {
     j: common_vendor.t($data.isUploading ? "上传中..." : "确认上传"),
-    k: common_vendor.o((...args) => $options.uploadStudents && $options.uploadStudents(...args), "ac"),
+    k: common_vendor.o((...args) => $options.uploadStudents && $options.uploadStudents(...args), "89"),
     l: $data.isUploading
   }) : {}, {
     m: $data.manualName,
-    n: common_vendor.o(($event) => $data.manualName = $event.detail.value, "26"),
+    n: common_vendor.o(($event) => $data.manualName = $event.detail.value, "76"),
     o: $data.manualPhone,
-    p: common_vendor.o(($event) => $data.manualPhone = $event.detail.value, "67"),
+    p: common_vendor.o(($event) => $data.manualPhone = $event.detail.value, "98"),
     q: common_vendor.t($data.isAdding ? "添加中..." : "添加学生"),
-    r: common_vendor.o((...args) => $options.addManual && $options.addManual(...args), "0b"),
-    s: $data.isAdding,
-    t: common_vendor.o((...args) => $options.resetAllCheckIn && $options.resetAllCheckIn(...args), "01"),
-    v: common_vendor.o((...args) => $options.clearAllStudents && $options.clearAllStudents(...args), "84")
+    r: common_vendor.o((...args) => $options.addManual && $options.addManual(...args), "a8"),
+    s: $data.isAdding
   });
 }
 const MiniProgramPage = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["render", _sfc_render], ["__scopeId", "data-v-dbc77958"]]);

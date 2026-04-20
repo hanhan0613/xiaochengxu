@@ -1,0 +1,9 @@
+{
+  "name": "claimTeacher",
+  "version": "1.0.0",
+  "description": "首次绑定教师身份",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

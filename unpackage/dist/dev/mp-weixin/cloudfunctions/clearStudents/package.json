@@ -1,0 +1,9 @@
+{
+  "name": "clearStudents",
+  "version": "1.0.0",
+  "description": "清空所有学生数据",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

@@ -19,9 +19,11 @@ const _sfc_main = {
       this.isLoggedIn = true;
       this.studentInfo = cached;
       this.phoneDisplay = phoneStr.substring(0, 3) + "****" + phoneStr.substring(7);
-      setTimeout(() => {
-        this.generateQRCode(cached._id);
-      }, 300);
+      if (!cached.checkedIn) {
+        setTimeout(() => {
+          this.generateQRCode(cached._id);
+        }, 300);
+      }
       this.refreshStatus();
     }
   },
@@ -41,7 +43,6 @@ const _sfc_main = {
           name: "login",
           data: { name: this.name.trim(), phone: this.phone.trim() }
         });
-        common_vendor.index.__f__("log", "at pages/student/student.vue:127", "login 云函数返回:", res);
         const result = res && res.result ? res.result : {};
         if (result.success && result.student) {
           const student = result.student;
@@ -51,16 +52,18 @@ const _sfc_main = {
           this.phoneDisplay = phoneStr.length >= 11 ? phoneStr.substring(0, 3) + "****" + phoneStr.substring(7) : phoneStr;
           this.isLoading = false;
           common_vendor.index.setStorageSync("studentInfo", student);
-          setTimeout(() => {
-            this.generateQRCode(student._id);
-          }, 300);
+          if (!student.checkedIn) {
+            setTimeout(() => {
+              this.generateQRCode(student._id);
+            }, 300);
+          }
         } else {
           const msg = result.message || "登录失败，请检查姓名和手机号是否正确";
           common_vendor.index.showToast({ title: msg, icon: "none", duration: 2e3 });
           this.isLoading = false;
         }
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/student/student.vue:152", "登录失败:", err);
+        common_vendor.index.__f__("error", "at pages/student/student.vue:165", "登录失败:", err);
         const errMsg = err && err.errMsg ? err.errMsg : "网络错误，请重试";
         common_vendor.index.showToast({ title: errMsg, icon: "none", duration: 2e3 });
         this.isLoading = false;
@@ -70,7 +73,7 @@ const _sfc_main = {
       const query = common_vendor.index.createSelectorQuery().in(this);
       query.select("#qrCanvas").fields({ node: true, size: true }).exec((res) => {
         if (!res[0]) {
-          common_vendor.index.__f__("error", "at pages/student/student.vue:165", "Canvas 未找到");
+          common_vendor.index.__f__("error", "at pages/student/student.vue:178", "Canvas 未找到");
           return;
         }
         const canvas = res[0].node;
@@ -80,11 +83,7 @@ const _sfc_main = {
         canvas.width = 500 * dpr;
         canvas.height = 500 * dpr;
         ctx.scale(dpr, dpr);
-        const qrData = JSON.stringify({
-          type: "checkin",
-          studentId,
-          timestamp: Date.now()
-        });
+        const qrData = `CKIN|${studentId}|${Date.now()}`;
         utils_qrcode.QRCode.draw(qrData, canvas, ctx, 500);
       });
     },
@@ -108,9 +107,14 @@ const _sfc_main = {
         if (res.result.success) {
           this.studentInfo = res.result.student;
           common_vendor.index.setStorageSync("studentInfo", res.result.student);
+          if (!res.result.student.checkedIn) {
+            setTimeout(() => {
+              this.generateQRCode(res.result.student._id);
+            }, 300);
+          }
         }
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/student/student.vue:210", err);
+        common_vendor.index.__f__("error", "at pages/student/student.vue:226", err);
       }
       common_vendor.index.hideLoading();
     }
@@ -121,23 +125,27 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
     a: !$data.isLoggedIn
   }, !$data.isLoggedIn ? {
     b: $data.name,
-    c: common_vendor.o(($event) => $data.name = $event.detail.value, "fa"),
+    c: common_vendor.o(($event) => $data.name = $event.detail.value, "76"),
     d: $data.phone,
-    e: common_vendor.o(($event) => $data.phone = $event.detail.value, "3e"),
+    e: common_vendor.o(($event) => $data.phone = $event.detail.value, "9f"),
     f: common_vendor.t($data.isLoading ? "验证中..." : "生成签到二维码"),
-    g: common_vendor.o((...args) => $options.doLogin && $options.doLogin(...args), "66"),
+    g: common_vendor.o((...args) => $options.doLogin && $options.doLogin(...args), "5e"),
     h: $data.isLoading
   } : {}, {
     i: $data.isLoggedIn
-  }, $data.isLoggedIn ? {
-    j: common_vendor.t($data.studentInfo.name),
-    k: common_vendor.t($data.studentInfo.checkedIn ? "已签到" : "未签到"),
-    l: common_vendor.n($data.studentInfo.checkedIn ? "tag-checked" : "tag-unchecked"),
+  }, $data.isLoggedIn ? common_vendor.e({
+    j: $data.studentInfo && $data.studentInfo.checkedIn
+  }, $data.studentInfo && $data.studentInfo.checkedIn ? {
+    k: common_vendor.t($data.studentInfo.name),
+    l: common_vendor.t($data.phoneDisplay)
+  } : {
     m: common_vendor.t($data.studentInfo.name),
-    n: common_vendor.t($data.phoneDisplay),
-    o: common_vendor.o((...args) => $options.refreshStatus && $options.refreshStatus(...args), "4f"),
-    p: common_vendor.o((...args) => $options.doLogout && $options.doLogout(...args), "fc")
-  } : {});
+    n: common_vendor.t($data.studentInfo.name),
+    o: common_vendor.t($data.phoneDisplay)
+  }, {
+    p: common_vendor.o((...args) => $options.refreshStatus && $options.refreshStatus(...args), "56"),
+    q: common_vendor.o((...args) => $options.doLogout && $options.doLogout(...args), "69")
+  }) : {});
 }
 const MiniProgramPage = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["render", _sfc_render], ["__scopeId", "data-v-809c9d48"]]);
 wx.createPage(MiniProgramPage);

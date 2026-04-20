@@ -41,14 +41,27 @@
       </view>
     </view>
 
-    <!-- 二维码展示 -->
+    <!-- 登录后视图 -->
     <view v-if="isLoggedIn" class="qr-section">
-      <view class="card qr-card">
+      <!-- 已签到：不显示二维码，显示大字 -->
+      <view v-if="studentInfo && studentInfo.checkedIn" class="card done-card">
+        <view class="done-icon-wrap">
+          <text class="done-icon">&#x2713;</text>
+        </view>
+        <text class="done-title">已签到</text>
+        <text class="done-sub">签到完成，无需再出示二维码</text>
+
+        <view class="done-info">
+          <text class="done-name">{{ studentInfo.name }}</text>
+          <text class="done-phone">{{ phoneDisplay }}</text>
+        </view>
+      </view>
+
+      <!-- 未签到：显示二维码 -->
+      <view v-else class="card qr-card">
         <view class="qr-status-bar">
           <text class="qr-student-name">{{ studentInfo.name }}</text>
-          <view :class="studentInfo.checkedIn ? 'tag-checked' : 'tag-unchecked'">
-            {{ studentInfo.checkedIn ? '已签到' : '未签到' }}
-          </view>
+          <view class="tag-unchecked">未签到</view>
         </view>
 
         <text class="qr-hint-text">请向老师出示此二维码</text>
@@ -97,9 +110,10 @@ export default {
       this.studentInfo = cached
       this.phoneDisplay = phoneStr.substring(0, 3) + '****' + phoneStr.substring(7)
 
-      setTimeout(() => {
-        this.generateQRCode(cached._id)
-      }, 300)
+      // 只有未签到时才生成二维码
+      if (!cached.checkedIn) {
+        setTimeout(() => { this.generateQRCode(cached._id) }, 300)
+      }
 
       this.refreshStatus()
     }
@@ -124,8 +138,6 @@ export default {
           data: { name: this.name.trim(), phone: this.phone.trim() }
         })
 
-        console.log('login 云函数返回:', res)
-
         const result = res && res.result ? res.result : {}
 
         if (result.success && result.student) {
@@ -140,9 +152,10 @@ export default {
 
           uni.setStorageSync('studentInfo', student)
 
-          setTimeout(() => {
-            this.generateQRCode(student._id)
-          }, 300)
+          // 已签到就不生成二维码，直接显示"已签到"大字
+          if (!student.checkedIn) {
+            setTimeout(() => { this.generateQRCode(student._id) }, 300)
+          }
         } else {
           const msg = result.message || '登录失败，请检查姓名和手机号是否正确'
           uni.showToast({ title: msg, icon: 'none', duration: 2000 })
@@ -173,12 +186,8 @@ export default {
           canvas.height = 500 * dpr
           ctx.scale(dpr, dpr)
 
-          const qrData = JSON.stringify({
-            type: 'checkin',
-            studentId: studentId,
-            timestamp: Date.now()
-          })
-
+          // 用紧凑格式，字符越少二维码越简单，扫码成功率越高
+          const qrData = `CKIN|${studentId}|${Date.now()}`
           QRCode.draw(qrData, canvas, ctx, 500)
         })
     },
@@ -205,6 +214,13 @@ export default {
         if (res.result.success) {
           this.studentInfo = res.result.student
           uni.setStorageSync('studentInfo', res.result.student)
+
+          // 只要刷新后是未签到，就生成二维码
+          // （覆盖"从未签到→未签到"和"从已签到被重置→未签到"两种情况）
+          if (!res.result.student.checkedIn) {
+            setTimeout(() => { this.generateQRCode(res.result.student._id) }, 300)
+          }
+          // 刷新后是已签到，页面自动切换到"已签到"视图，不需要二维码
         }
       } catch (err) {
         console.error(err)
@@ -217,33 +233,37 @@ export default {
 </script>
 
 <style scoped>
+/* ========== 登录区 ========== */
 .login-section {
   padding-top: 20rpx;
 }
 
 .login-header {
   text-align: center;
-  margin-bottom: 36rpx;
+  margin-bottom: 40rpx;
 }
 
 .login-icon-wrap {
-  width: 140rpx;
-  height: 140rpx;
+  width: 160rpx;
+  height: 160rpx;
   border-radius: 50%;
-  background: #DDF4FF;
+  background: linear-gradient(135deg, #E0F3FF 0%, #7BDCFF 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 24rpx;
+  margin: 0 auto 28rpx;
+  box-shadow: 0 12rpx 32rpx rgba(28, 176, 246, 0.25);
 }
 
 .login-icon-text {
-  font-size: 64rpx;
+  font-size: 72rpx;
+  line-height: 1;
+  display: block;
+  filter: drop-shadow(0 2rpx 4rpx rgba(0, 0, 0, 0.1));
 }
 
-/* placeholder 修复 */
 .input-placeholder {
-  color: #CDCDCD;
+  color: var(--text-placeholder);
   font-size: 30rpx;
   font-weight: 400;
   line-height: 96rpx;
@@ -252,47 +272,81 @@ export default {
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
 
-/* 二维码页面 */
+/* ========== 二维码区 ========== */
 .qr-section {
   padding-top: 20rpx;
 }
 
 .qr-card {
   text-align: center;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F0F9FF 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.qr-card::before {
+  content: '';
+  position: absolute;
+  top: -80rpx;
+  right: -80rpx;
+  width: 260rpx;
+  height: 260rpx;
+  background: radial-gradient(circle, rgba(28, 176, 246, 0.12) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+.qr-card::after {
+  content: '';
+  position: absolute;
+  bottom: -60rpx;
+  left: -60rpx;
+  width: 200rpx;
+  height: 200rpx;
+  background: radial-gradient(circle, rgba(79, 70, 229, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
 }
 
 .qr-status-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 24rpx;
+  margin-bottom: 20rpx;
+  position: relative;
+  z-index: 1;
 }
 
 .qr-student-name {
-  font-size: 38rpx;
+  font-size: 40rpx;
   font-weight: 800;
-  color: #3c3c3c;
+  color: var(--text-primary);
+  letter-spacing: -0.5rpx;
 }
 
 .qr-hint-text {
-  font-size: 28rpx;
-  color: #AFAFAF;
+  font-size: 26rpx;
+  color: var(--text-secondary);
   font-weight: 500;
   display: block;
   margin-bottom: 28rpx;
+  position: relative;
+  z-index: 1;
 }
 
 .qr-code-wrap {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 24rpx;
-  background: #f7f7f7;
-  border-radius: 24rpx;
+  padding: 28rpx;
+  background: #fff;
+  border-radius: 28rpx;
   margin: 0 auto;
   width: 520rpx;
   height: 520rpx;
-  border: 4rpx solid #E5E5E5;
+  border: 3rpx solid var(--border);
+  box-shadow: 0 12rpx 32rpx rgba(28, 176, 246, 0.1),
+              inset 0 0 0 8rpx rgba(28, 176, 246, 0.04);
+  position: relative;
+  z-index: 1;
 }
 
 .qr-canvas {
@@ -301,20 +355,126 @@ export default {
 }
 
 .qr-student-info {
-  margin-top: 28rpx;
+  margin-top: 32rpx;
   display: flex;
   flex-direction: column;
   gap: 8rpx;
+  position: relative;
+  z-index: 1;
 }
 
 .qr-name-text {
   font-size: 34rpx;
   font-weight: 700;
-  color: #3c3c3c;
+  color: var(--text-primary);
 }
 
 .qr-phone-text {
-  font-size: 28rpx;
-  color: #AFAFAF;
+  font-size: 26rpx;
+  color: var(--text-secondary);
+  letter-spacing: 2rpx;
+}
+
+/* ========== 已签到大字视图 ========== */
+.done-card {
+  text-align: center;
+  background: linear-gradient(180deg, #FFFFFF 0%, #ECFDF5 100%);
+  padding: 72rpx 40rpx 56rpx;
+  position: relative;
+  overflow: hidden;
+}
+
+.done-card::before {
+  content: '';
+  position: absolute;
+  top: -100rpx;
+  right: -100rpx;
+  width: 300rpx;
+  height: 300rpx;
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.15) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+.done-card::after {
+  content: '';
+  position: absolute;
+  bottom: -80rpx;
+  left: -80rpx;
+  width: 240rpx;
+  height: 240rpx;
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+.done-icon-wrap {
+  width: 200rpx;
+  height: 200rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 32rpx;
+  box-shadow: 0 16rpx 40rpx rgba(34, 197, 94, 0.4);
+  position: relative;
+  z-index: 1;
+  animation: done-pop 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes done-pop {
+  0%   { transform: scale(0.3); opacity: 0; }
+  60%  { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.done-icon {
+  color: #fff;
+  font-size: 120rpx;
+  font-weight: 900;
+  line-height: 1;
+  display: block;
+}
+
+.done-title {
+  font-size: 80rpx;
+  font-weight: 900;
+  color: #16A34A;
+  display: block;
+  margin-bottom: 12rpx;
+  letter-spacing: 4rpx;
+  line-height: 1.1;
+  position: relative;
+  z-index: 1;
+}
+
+.done-sub {
+  font-size: 26rpx;
+  color: var(--text-secondary);
+  display: block;
+  margin-bottom: 40rpx;
+  position: relative;
+  z-index: 1;
+}
+
+.done-info {
+  padding-top: 32rpx;
+  border-top: 2rpx dashed #BBF7D0;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  position: relative;
+  z-index: 1;
+}
+
+.done-name {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.done-phone {
+  font-size: 26rpx;
+  color: var(--text-secondary);
+  letter-spacing: 2rpx;
 }
 </style>

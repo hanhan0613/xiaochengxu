@@ -1,0 +1,9 @@
+{
+  "name": "startSession",
+  "version": "1.0.0",
+  "description": "开启新一轮签到活动",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}
