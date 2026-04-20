@@ -7,7 +7,7 @@
           <text class="login-icon-text">&#x1F393;</text>
         </view>
         <text class="page-title">学生签到</text>
-        <text class="page-subtitle">输入姓名和手机号，生成签到码</text>
+        <text class="page-subtitle">输入姓名、手机号和核验码，生成签到码</text>
       </view>
 
       <view class="card">
@@ -26,12 +26,23 @@
           <text class="input-label">手机号</text>
           <input
             class="input-field"
-            type="number"
-            maxlength="11"
-            placeholder="输入11位手机号"
+            type="text"
+            placeholder="输入手机号"
             placeholder-class="input-placeholder"
             :adjust-position="true"
             v-model="phone"
+          />
+        </view>
+
+        <view class="input-group">
+          <text class="input-label">核验码</text>
+          <input
+            class="input-field"
+            type="text"
+            placeholder="输入核验码"
+            placeholder-class="input-placeholder"
+            :adjust-position="true"
+            v-model="code"
           />
         </view>
 
@@ -95,6 +106,7 @@ export default {
     return {
       name: '',
       phone: '',
+      code: '',
       isLoggedIn: false,
       isLoading: false,
       studentInfo: null,
@@ -105,10 +117,12 @@ export default {
   onShow() {
     const cached = uni.getStorageSync('studentInfo')
     if (cached) {
-      const phoneStr = cached.phone
+      const phoneStr = (cached.phone || '').toString()
       this.isLoggedIn = true
       this.studentInfo = cached
-      this.phoneDisplay = phoneStr.substring(0, 3) + '****' + phoneStr.substring(7)
+      this.phoneDisplay = phoneStr.length >= 11
+        ? phoneStr.substring(0, 3) + '****' + phoneStr.substring(7)
+        : phoneStr
 
       // 只有未签到时才生成二维码
       if (!cached.checkedIn) {
@@ -125,8 +139,12 @@ export default {
         uni.showToast({ title: '请输入姓名', icon: 'none' })
         return
       }
-      if (!this.phone.trim() || this.phone.length !== 11) {
-        uni.showToast({ title: '请输入正确的手机号', icon: 'none' })
+      if (!this.phone.trim()) {
+        uni.showToast({ title: '请输入手机号', icon: 'none' })
+        return
+      }
+      if (!this.code.trim()) {
+        uni.showToast({ title: '请输入核验码', icon: 'none' })
         return
       }
 
@@ -135,7 +153,11 @@ export default {
       try {
         const res = await wx.cloud.callFunction({
           name: 'login',
-          data: { name: this.name.trim(), phone: this.phone.trim() }
+          data: {
+            name: this.name.trim(),
+            phone: this.phone.trim(),
+            code: this.code.trim()
+          }
         })
 
         const result = res && res.result ? res.result : {}
@@ -150,7 +172,10 @@ export default {
             : phoneStr
           this.isLoading = false
 
-          uni.setStorageSync('studentInfo', student)
+          // 将核验码一并缓存，便于后续刷新状态
+          const toCache = Object.assign({}, student, { code: this.code.trim() })
+          uni.setStorageSync('studentInfo', toCache)
+          this.studentInfo = toCache
 
           // 已签到就不生成二维码，直接显示"已签到"大字
           if (!student.checkedIn) {
@@ -198,6 +223,7 @@ export default {
       this.studentInfo = null
       this.name = ''
       this.phone = ''
+      this.code = ''
       this.phoneDisplay = ''
     },
 
@@ -208,12 +234,17 @@ export default {
       try {
         const res = await wx.cloud.callFunction({
           name: 'login',
-          data: { name: this.studentInfo.name, phone: this.studentInfo.phone }
+          data: {
+            name: this.studentInfo.name,
+            phone: this.studentInfo.phone,
+            code: this.studentInfo.code
+          }
         })
 
         if (res.result.success) {
-          this.studentInfo = res.result.student
-          uni.setStorageSync('studentInfo', res.result.student)
+          const refreshed = Object.assign({}, res.result.student, { code: this.studentInfo.code })
+          this.studentInfo = refreshed
+          uni.setStorageSync('studentInfo', refreshed)
 
           // 只要刷新后是未签到，就生成二维码
           // （覆盖"从未签到→未签到"和"从已签到被重置→未签到"两种情况）

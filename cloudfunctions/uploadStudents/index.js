@@ -37,8 +37,9 @@ exports.main = async (event, context) => {
       for (const student of batch) {
         const name = (student.name || '').toString().trim()
         const phone = (student.phone || '').toString().trim()
+        const code = (student.code || '').toString().trim()
 
-        if (!name || !phone) {
+        if (!name || !phone || !code) {
           skipCount++
           continue
         }
@@ -49,9 +50,10 @@ exports.main = async (event, context) => {
         }).get()
 
         if (existing.data.length > 0) {
-          // 已存在：重置签到状态即可
+          // 已存在：更新核验码并重置签到状态
           await db.collection('students').doc(existing.data[0]._id).update({
             data: {
+              code: code,
               checkedIn: false,
               checkInTime: null,
               updateTime: db.serverDate()
@@ -63,6 +65,7 @@ exports.main = async (event, context) => {
             data: {
               name: name,
               phone: phone,
+              code: code,
               checkedIn: false,
               checkInTime: null,
               createTime: db.serverDate(),

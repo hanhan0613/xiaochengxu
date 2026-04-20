@@ -6,7 +6,7 @@
     <!-- Excel上传区域 -->
     <view class="card">
       <text class="card-heading">上传学生名单</text>
-      <text class="card-desc">支持 .xlsx 格式，表头需包含"姓名"和"手机号"列</text>
+      <text class="card-desc">支持 .xlsx 格式，表头需包含"姓名"、"手机号"和"核验码"列</text>
 
       <view class="upload-zone" @click="chooseExcel" hover-class="upload-zone-active">
         <text class="upload-big-icon">&#x1F4C1;</text>
@@ -29,11 +29,13 @@
             <text class="preview-cell cell-idx">#</text>
             <text class="preview-cell cell-name">姓名</text>
             <text class="preview-cell cell-phone">手机号</text>
+            <text class="preview-cell cell-code">核验码</text>
           </view>
           <view class="preview-tbl-row" v-for="(item, index) in previewList" :key="index">
             <text class="preview-cell cell-idx">{{ index + 1 }}</text>
             <text class="preview-cell cell-name">{{ item.name }}</text>
             <text class="preview-cell cell-phone">{{ item.phone }}</text>
+            <text class="preview-cell cell-code">{{ item.code }}</text>
           </view>
           <view class="preview-tbl-more" v-if="parsedStudents.length > 5">
             <text>... 共 {{ parsedStudents.length }} 条</text>
@@ -65,12 +67,23 @@
         <text class="input-label">手机号</text>
         <input
           class="input-field"
-          type="number"
-          maxlength="11"
-          placeholder="输入11位手机号"
+          type="text"
+          placeholder="输入手机号"
           placeholder-class="input-placeholder"
           :adjust-position="true"
           v-model="manualPhone"
+        />
+      </view>
+
+      <view class="input-group">
+        <text class="input-label">核验码</text>
+        <input
+          class="input-field"
+          type="text"
+          placeholder="输入核验码（用于学生签到）"
+          placeholder-class="input-placeholder"
+          :adjust-position="true"
+          v-model="manualCode"
         />
       </view>
 
@@ -99,6 +112,7 @@ export default {
       isUploading: false,
       manualName: '',
       manualPhone: '',
+      manualCode: '',
       isAdding: false
     }
   },
@@ -189,12 +203,16 @@ export default {
           k.includes('手机') || k.includes('电话') || k.includes('号码') ||
           k.toLowerCase() === 'phone' || k.toLowerCase() === 'tel'
         )
+        let codeKey = keys.find(k =>
+          k.includes('核验码') || k.includes('验证码') || k.includes('密码') ||
+          k.toLowerCase() === 'code' || k.toLowerCase() === 'password' || k.toLowerCase() === 'pwd'
+        )
 
-        if (!nameKey || !phoneKey) {
+        if (!nameKey || !phoneKey || !codeKey) {
           uni.hideLoading()
           uni.showModal({
             title: '格式不正确',
-            content: `未找到"姓名"或"手机号"列。检测到的列名：${keys.join('、')}`,
+            content: `未找到"姓名"、"手机号"或"核验码"列。检测到的列名：${keys.join('、')}`,
             showCancel: false
           })
           return
@@ -203,9 +221,10 @@ export default {
         const students = data
           .map(row => ({
             name: (row[nameKey] || '').toString().trim(),
-            phone: (row[phoneKey] || '').toString().trim()
+            phone: (row[phoneKey] || '').toString().trim(),
+            code: (row[codeKey] || '').toString().trim()
           }))
-          .filter(s => s.name && s.phone)
+          .filter(s => s.name && s.phone && s.code)
 
         this.parsedStudents = students
         this.previewList = students.slice(0, 5)
@@ -258,8 +277,12 @@ export default {
         uni.showToast({ title: '请输入姓名', icon: 'none' })
         return
       }
-      if (!this.manualPhone.trim() || this.manualPhone.length !== 11) {
-        uni.showToast({ title: '请输入正确的手机号', icon: 'none' })
+      if (!this.manualPhone.trim()) {
+        uni.showToast({ title: '请输入手机号', icon: 'none' })
+        return
+      }
+      if (!this.manualCode.trim()) {
+        uni.showToast({ title: '请输入核验码', icon: 'none' })
         return
       }
 
@@ -269,7 +292,11 @@ export default {
         const res = await wx.cloud.callFunction({
           name: 'uploadStudents',
           data: {
-            students: [{ name: this.manualName.trim(), phone: this.manualPhone.trim() }]
+            students: [{
+              name: this.manualName.trim(),
+              phone: this.manualPhone.trim(),
+              code: this.manualCode.trim()
+            }]
           }
         })
 
@@ -277,6 +304,7 @@ export default {
           uni.showToast({ title: '添加成功', icon: 'success' })
           this.manualName = ''
           this.manualPhone = ''
+          this.manualCode = ''
         } else {
           uni.showToast({ title: res.result.message || '添加失败', icon: 'none' })
         }
@@ -439,8 +467,12 @@ export default {
 .cell-idx  { width: 60rpx;  flex-shrink: 0; color: var(--text-placeholder); font-weight: 600; }
 .cell-name { flex: 1; min-width: 0; font-weight: 600; color: var(--text-primary); }
 .cell-phone {
-  width: 240rpx; flex-shrink: 0; text-align: right;
+  width: 200rpx; flex-shrink: 0; text-align: right;
   color: var(--text-secondary); letter-spacing: 1rpx;
+}
+.cell-code {
+  width: 140rpx; flex-shrink: 0; text-align: right;
+  color: var(--primary-dark); font-weight: 600; letter-spacing: 1rpx;
 }
 
 .preview-tbl-more {

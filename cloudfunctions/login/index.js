@@ -4,10 +4,13 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
 exports.main = async (event, context) => {
-  const { name, phone } = event
+  const { name, phone, code } = event
 
   if (!name || !phone) {
     return { success: false, message: '请输入姓名和手机号' }
+  }
+  if (!code) {
+    return { success: false, message: '请输入核验码' }
   }
 
   try {
@@ -21,6 +24,9 @@ exports.main = async (event, context) => {
     }
 
     const student = result.data[0]
+    if ((student.code || '').toString().trim() !== code.toString().trim()) {
+      return { success: false, message: '核验码不正确' }
+    }
     return {
       success: true,
       message: '验证成功',

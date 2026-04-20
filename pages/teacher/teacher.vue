@@ -101,7 +101,7 @@
         </view>
         <view class="stu-info">
           <text class="stu-name">{{ item.name }}</text>
-          <text class="stu-phone">{{ item.phone }}</text>
+          <text class="stu-phone" :selectable="true" :user-select="true">{{ item.phone }}</text>
         </view>
         <view class="stu-status">
           <view :class="item.checkedIn ? 'tag-checked' : 'tag-unchecked'">
