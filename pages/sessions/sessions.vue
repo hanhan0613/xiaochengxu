@@ -104,6 +104,7 @@
           :class="['roster-item', !item.checkedIn ? 'roster-item-miss' : '']"
           v-for="(item, idx) in filteredRoster"
           :key="item._id"
+          @tap="onRosterTap(item)"
         >
           <view class="roster-idx">{{ idx + 1 }}</view>
           <view :class="['roster-avatar', item.checkedIn ? 'avatar-on' : 'avatar-off']">
@@ -111,7 +112,7 @@
           </view>
           <view class="roster-info">
             <text class="roster-name">{{ item.name }}</text>
-            <text class="roster-phone" :selectable="true" :user-select="true">{{ item.phone }}</text>
+            <text class="roster-phone">{{ item.phone }}</text>
           </view>
           <view class="roster-right">
             <view :class="item.checkedIn ? 'tag-checked' : 'tag-unchecked'">
@@ -140,7 +141,8 @@ export default {
       sessions: [],
       isLoading: false,
       detailSession: null,
-      rosterFilter: 'all'
+      rosterFilter: 'all',
+      _lastTapInfo: { id: '', time: 0 }
     }
   },
 
@@ -169,6 +171,23 @@ export default {
   },
 
   methods: {
+    onRosterTap(item) {
+      const now = Date.now()
+      const last = this._lastTapInfo
+      if (last.id === item._id && now - last.time < 350) {
+        this._lastTapInfo = { id: '', time: 0 }
+        if (!item.phone) return
+        uni.setClipboardData({
+          data: String(item.phone),
+          success: () => {
+            uni.showToast({ title: `已复制 ${item.phone}`, icon: 'none' })
+          }
+        })
+      } else {
+        this._lastTapInfo = { id: item._id, time: now }
+      }
+    },
+
     async ensureTeacher() {
       let role = uni.getStorageSync('role')
       if (role !== 'teacher') {

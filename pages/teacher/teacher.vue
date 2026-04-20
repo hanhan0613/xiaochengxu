@@ -95,13 +95,13 @@
 
     <!-- 学生列表 -->
     <view class="stu-list">
-      <view class="stu-item" v-for="item in students" :key="item._id">
+      <view class="stu-item" v-for="item in students" :key="item._id" @tap="onStudentTap(item)">
         <view class="stu-avatar" :class="item.checkedIn ? 'avatar-ok' : 'avatar-wait'">
           <text class="stu-avatar-letter">{{ item.name.charAt(0) }}</text>
         </view>
         <view class="stu-info">
           <text class="stu-name">{{ item.name }}</text>
-          <text class="stu-phone" :selectable="true" :user-select="true">{{ item.phone }}</text>
+          <text class="stu-phone">{{ item.phone }}</text>
         </view>
         <view class="stu-status">
           <view :class="item.checkedIn ? 'tag-checked' : 'tag-unchecked'">
@@ -176,7 +176,8 @@ export default {
       showNewSessionModal: false,
       newSessionTitle: '',
       clearStudentsOption: false,
-      newSessionLoading: false
+      newSessionLoading: false,
+      _lastTapInfo: { id: '', time: 0 }
     }
   },
 
@@ -202,6 +203,24 @@ export default {
   },
 
   methods: {
+    onStudentTap(item) {
+      const now = Date.now()
+      const last = this._lastTapInfo
+      if (last.id === item._id && now - last.time < 350) {
+        // 双击 → 复制手机号
+        this._lastTapInfo = { id: '', time: 0 }
+        if (!item.phone) return
+        uni.setClipboardData({
+          data: String(item.phone),
+          success: () => {
+            uni.showToast({ title: `已复制 ${item.phone}`, icon: 'none' })
+          }
+        })
+      } else {
+        this._lastTapInfo = { id: item._id, time: now }
+      }
+    },
+
     async ensureTeacher() {
       // 先看缓存，没有缓存再请求
       let role = uni.getStorageSync('role')
