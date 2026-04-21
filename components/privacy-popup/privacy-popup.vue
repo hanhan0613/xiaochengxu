@@ -38,6 +38,12 @@
 </template>
 
 <script>
+// ============ 调试开关 ============
+// 测试弹窗 UI 时临时置为 true，强制弹出（忽略 needAuthorization）
+// 上线前必须改回 false，避免已同意用户被重复打扰
+const FORCE_SHOW_PRIVACY_POPUP = true
+// ==================================
+
 export default {
   name: 'PrivacyPopup',
   data() {
@@ -85,6 +91,11 @@ export default {
           console.log('[privacy-popup] getPrivacySetting result:', res)
           if (res && res.privacyContractName) {
             this.contractName = res.privacyContractName
+          }
+          if (FORCE_SHOW_PRIVACY_POPUP) {
+            console.log('[privacy-popup] FORCE_SHOW 开启，强制弹窗')
+            this.showPopup = true
+            return
           }
           if (res && res.needAuthorization) {
             console.log('[privacy-popup] needAuthorization=true, 弹窗展示')
