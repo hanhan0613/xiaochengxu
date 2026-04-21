@@ -1,8 +1,5 @@
 <template>
   <view class="container">
-    <!-- 隐私授权弹层 -->
-    <privacy-popup />
-
     <text class="page-title">管理后台</text>
     <text class="page-subtitle">上传名单 / 管理签到数据</text>
 
