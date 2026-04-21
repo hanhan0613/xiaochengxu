@@ -16,6 +16,7 @@
             "minified" : true
         },
         "usingComponents" : true,
+        "lazyCodeLoading" : "requiredComponents",
         "cloudfunctionRoot" : "cloudfunctions/"
     }
 }
