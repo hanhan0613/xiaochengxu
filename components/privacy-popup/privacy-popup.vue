@@ -49,6 +49,7 @@ export default {
   },
   mounted() {
     this.initPrivacyListener()
+    this.checkAndShowOnLaunch()
   },
   methods: {
     initPrivacyListener() {
@@ -67,6 +68,21 @@ export default {
           })
         }
         this.showPopup = true
+      })
+    },
+    checkAndShowOnLaunch() {
+      if (!wx.getPrivacySetting) {
+        return
+      }
+      wx.getPrivacySetting({
+        success: (res) => {
+          if (res && res.privacyContractName) {
+            this.contractName = res.privacyContractName
+          }
+          if (res && res.needAuthorization) {
+            this.showPopup = true
+          }
+        }
       })
     },
     handleAgree() {
