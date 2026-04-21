@@ -48,15 +48,20 @@ export default {
     }
   },
   mounted() {
+    console.log('[privacy-popup] mounted')
+    console.log('[privacy-popup] wx.getPrivacySetting:', typeof wx.getPrivacySetting)
+    console.log('[privacy-popup] wx.onNeedPrivacyAuthorization:', typeof wx.onNeedPrivacyAuthorization)
     this.initPrivacyListener()
     this.checkAndShowOnLaunch()
   },
   methods: {
     initPrivacyListener() {
       if (!wx.onNeedPrivacyAuthorization) {
+        console.warn('[privacy-popup] onNeedPrivacyAuthorization 不可用，基础库过低')
         return
       }
       wx.onNeedPrivacyAuthorization((resolve, eventInfo) => {
+        console.log('[privacy-popup] onNeedPrivacyAuthorization triggered', eventInfo)
         this.resolvePrivacyAuth = resolve
         if (wx.getPrivacySetting) {
           wx.getPrivacySetting({
@@ -72,16 +77,24 @@ export default {
     },
     checkAndShowOnLaunch() {
       if (!wx.getPrivacySetting) {
+        console.warn('[privacy-popup] getPrivacySetting 不可用，基础库过低')
         return
       }
       wx.getPrivacySetting({
         success: (res) => {
+          console.log('[privacy-popup] getPrivacySetting result:', res)
           if (res && res.privacyContractName) {
             this.contractName = res.privacyContractName
           }
           if (res && res.needAuthorization) {
+            console.log('[privacy-popup] needAuthorization=true, 弹窗展示')
             this.showPopup = true
+          } else {
+            console.log('[privacy-popup] needAuthorization=false, 不弹窗（可能已同意或后台未发布协议）')
           }
+        },
+        fail: (err) => {
+          console.error('[privacy-popup] getPrivacySetting 调用失败:', err)
         }
       })
     },

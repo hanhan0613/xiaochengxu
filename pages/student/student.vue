@@ -102,8 +102,13 @@
 
 <script>
 import QRCode from '@/utils/qrcode.js'
+import PrivacyPopup from '@/components/privacy-popup/privacy-popup.vue'
 
 export default {
+  components: {
+    PrivacyPopup,
+    'privacy-popup': PrivacyPopup
+  },
   data() {
     return {
       name: '',
@@ -114,6 +119,10 @@ export default {
       studentInfo: null,
       phoneDisplay: ''
     }
+  },
+
+  mounted() {
+    console.log('[student page] mounted, isLoggedIn =', this.isLoggedIn)
   },
 
   onShow() {
