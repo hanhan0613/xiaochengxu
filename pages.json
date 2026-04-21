@@ -39,5 +39,11 @@
     "navigationBarBackgroundColor": "#1CB0F6",
     "navigationBarTitleText": "签到打卡",
     "navigationBarTextStyle": "white"
+  },
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^privacy-(.*)": "@/components/privacy-$1/privacy-$1.vue"
+    }
   }
 }
