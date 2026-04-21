@@ -7,7 +7,7 @@
         <text class="privacy-text">
 感谢您使用本小程序！在您使用前，请您仔细阅读
         </text>
-        <text class="privacy-link" @click="openContract">《{{ contractName }}》</text>
+        <text class="privacy-link" @click="openContract">{{ contractNameDisplay }}</text>
         <text class="privacy-text">
 。为了向您提供签到打卡等服务，我们将在您使用过程中收集、使用必要的信息，包括：
 
@@ -51,6 +51,15 @@ export default {
       showPopup: false,
       contractName: '用户隐私保护指引',
       resolvePrivacyAuth: null
+    }
+  },
+  computed: {
+    // 后端返回的 privacyContractName 可能自带《》，这里统一规范化：
+    // 去掉两端已有的《》，再补一对，避免嵌套
+    contractNameDisplay() {
+      const raw = (this.contractName || '').toString().trim()
+      const stripped = raw.replace(/^《+/, '').replace(/》+$/, '')
+      return '《' + stripped + '》'
     }
   },
   mounted() {
