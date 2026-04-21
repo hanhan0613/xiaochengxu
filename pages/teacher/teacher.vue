@@ -1,5 +1,8 @@
 <template>
   <view class="container">
+    <!-- 隐私授权弹层 -->
+    <privacy-popup />
+
     <text class="page-title">教师端</text>
     <text class="page-subtitle">扫码签到 / 查看学生签到状态</text>
 

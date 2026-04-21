@@ -32,6 +32,9 @@
       </view>
     </view>
 
+    <!-- 隐私授权弹层 -->
+    <privacy-popup />
+
     <!-- 教师身份验证弹层 -->
     <view v-if="showTeacherAuth" class="auth-mask" @click="closeAuth">
       <view class="auth-card" @click.stop>

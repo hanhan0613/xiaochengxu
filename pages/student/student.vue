@@ -1,5 +1,8 @@
 <template>
   <view class="container">
+    <!-- 隐私授权弹层 -->
+    <privacy-popup />
+
     <!-- 登录表单 -->
     <view v-if="!isLoggedIn" class="login-section">
       <view class="login-header">
