@@ -2,8 +2,6 @@
   <view class="container">
     <!-- 登录表单 -->
     <view v-if="!isLoggedIn" class="login-section">
-      <!-- 隐私授权弹层：仅在填写表单阶段出现 -->
-      <privacy-popup />
       <view class="login-header">
         <view class="login-icon-wrap">
           <text class="login-icon-text">&#x1F393;</text>
@@ -102,13 +100,8 @@
 
 <script>
 import QRCode from '@/utils/qrcode.js'
-import PrivacyPopup from '@/components/privacy-popup/privacy-popup.vue'
 
 export default {
-  components: {
-    PrivacyPopup,
-    'privacy-popup': PrivacyPopup
-  },
   data() {
     return {
       name: '',
@@ -119,10 +112,6 @@ export default {
       studentInfo: null,
       phoneDisplay: ''
     }
-  },
-
-  mounted() {
-    console.log('[student page] mounted, isLoggedIn =', this.isLoggedIn)
   },
 
   onShow() {
@@ -145,6 +134,22 @@ export default {
   },
 
   methods: {
+    // 调用微信官方隐私授权原生弹窗。
+    // 未同意时弹窗；已同意直接 resolve，无副作用。
+    requirePrivacyAuth() {
+      return new Promise((resolve, reject) => {
+        if (!wx.requirePrivacyAuthorize) {
+          // 低版本基础库没有该 API，直接放行
+          resolve()
+          return
+        }
+        wx.requirePrivacyAuthorize({
+          success: () => resolve(),
+          fail: (err) => reject(err)
+        })
+      })
+    },
+
     async doLogin() {
       if (!this.name.trim()) {
         uni.showToast({ title: '请输入姓名', icon: 'none' })
@@ -156,6 +161,14 @@ export default {
       }
       if (!this.code.trim()) {
         uni.showToast({ title: '请输入核验码', icon: 'none' })
+        return
+      }
+
+      // 先请求隐私授权（微信官方原生弹窗），用户拒绝则中止登录
+      try {
+        await this.requirePrivacyAuth()
+      } catch (e) {
+        uni.showToast({ title: '需同意隐私协议后继续', icon: 'none' })
         return
       }
 
