@@ -46,6 +46,17 @@
           />
         </view>
 
+        <view class="consent-row" @click="toggleConsent">
+          <view class="consent-box" :class="{ 'consent-box-checked': consentChecked }">
+            <text v-if="consentChecked" class="consent-check">&#x2713;</text>
+          </view>
+          <view class="consent-text-wrap">
+            <text class="consent-text">我已阅读并同意</text>
+            <text class="consent-link" @click.stop="openPrivacyContract">《用户隐私保护指引》</text>
+            <text class="consent-text">，授权本小程序收集上述姓名、手机号及核验码用于课堂签到。</text>
+          </view>
+        </view>
+
         <button class="btn-primary" @click="doLogin" :disabled="isLoading">
           {{ isLoading ? '验证中...' : '生成签到二维码' }}
         </button>
@@ -110,7 +121,8 @@ export default {
       isLoggedIn: false,
       isLoading: false,
       studentInfo: null,
-      phoneDisplay: ''
+      phoneDisplay: '',
+      consentChecked: false
     }
   },
 
@@ -134,6 +146,16 @@ export default {
   },
 
   methods: {
+    toggleConsent() {
+      this.consentChecked = !this.consentChecked
+    },
+    openPrivacyContract() {
+      if (wx.openPrivacyContract) {
+        wx.openPrivacyContract({
+          fail: () => uni.showToast({ title: '打开失败，请稍后重试', icon: 'none' })
+        })
+      }
+    },
     async doLogin() {
       if (!this.name.trim()) {
         uni.showToast({ title: '请输入姓名', icon: 'none' })
@@ -145,6 +167,10 @@ export default {
       }
       if (!this.code.trim()) {
         uni.showToast({ title: '请输入核验码', icon: 'none' })
+        return
+      }
+      if (!this.consentChecked) {
+        uni.showToast({ title: '请先阅读并同意《用户隐私保护指引》', icon: 'none', duration: 2000 })
         return
       }
 
@@ -301,6 +327,59 @@ export default {
   height: 96rpx;
   overflow: visible;
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+/* ========== 隐私同意行 ========== */
+.consent-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  margin-top: 8rpx;
+  padding: 4rpx 4rpx;
+}
+
+.consent-box {
+  width: 32rpx;
+  height: 32rpx;
+  border-radius: 8rpx;
+  border: 3rpx solid var(--border-strong);
+  background: #fff;
+  margin-right: 16rpx;
+  margin-top: 4rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.consent-box-checked {
+  background: linear-gradient(135deg, #1CB0F6 0%, #4F46E5 100%);
+  border-color: var(--primary);
+}
+
+.consent-check {
+  color: #fff;
+  font-size: 22rpx;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.consent-text-wrap {
+  flex: 1;
+  line-height: 1.6;
+}
+
+.consent-text {
+  font-size: 24rpx;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.consent-link {
+  font-size: 24rpx;
+  color: var(--primary);
+  font-weight: 600;
+  line-height: 1.6;
 }
 
 /* ========== 二维码区 ========== */

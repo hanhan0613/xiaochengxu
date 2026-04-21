@@ -32,6 +32,12 @@
       </view>
     </view>
 
+    <!-- 协议底部入口：跳转微信官方"用户隐私保护指引" -->
+    <view class="policy-footer">
+      <text class="policy-footer-text">使用本小程序即表示您已阅读并同意</text>
+      <text class="policy-link" @click="openPrivacyContract">《用户隐私保护指引》</text>
+    </view>
+
     <!-- 教师身份验证弹层 -->
     <view v-if="showTeacherAuth" class="auth-mask" @click="closeAuth">
       <view class="auth-card" @click.stop>
@@ -70,28 +76,59 @@ export default {
     }
   },
   methods: {
-    goStudent() {
-      uni.navigateTo({ url: '/pages/student/student' })
-    },
-    async goTeacher() {
-      uni.showLoading({ title: '验证身份...' })
-      try {
-        const res = await wx.cloud.callFunction({ name: 'getRole' })
-        uni.hideLoading()
-        const r = res && res.result ? res.result : {}
-        if (r.success && r.role === 'teacher') {
-          uni.setStorageSync('role', 'teacher')
-          uni.setStorageSync('openid', r.openid)
-          uni.navigateTo({ url: '/pages/teacher/teacher' })
-        } else {
-          // 非教师，弹出密码验证
-          this.showTeacherAuth = true
-        }
-      } catch (err) {
-        uni.hideLoading()
-        console.error(err)
-        uni.showToast({ title: '网络错误，请重试', icon: 'none' })
+    openPrivacyContract() {
+      if (wx.openPrivacyContract) {
+        wx.openPrivacyContract({
+          fail: () => uni.showToast({ title: '打开失败，请稍后重试', icon: 'none' })
+        })
       }
+    },
+    // 通过官方接口检查并拉起授权弹窗；授权通过后执行回调
+    ensurePrivacyAuthorized(onAuthorized) {
+      if (!wx.getPrivacySetting) {
+        // 低版本基础库不支持隐私接口时直接放行
+        onAuthorized()
+        return
+      }
+      wx.getPrivacySetting({
+        success: (res) => {
+          if (res.needAuthorization) {
+            wx.requirePrivacyAuthorize({
+              success: () => onAuthorized(),
+              fail: () => uni.showToast({ title: '需同意后方可使用', icon: 'none' })
+            })
+          } else {
+            onAuthorized()
+          }
+        },
+        fail: () => onAuthorized()
+      })
+    },
+    goStudent() {
+      this.ensurePrivacyAuthorized(() => {
+        uni.navigateTo({ url: '/pages/student/student' })
+      })
+    },
+    goTeacher() {
+      this.ensurePrivacyAuthorized(async () => {
+        uni.showLoading({ title: '验证身份...' })
+        try {
+          const res = await wx.cloud.callFunction({ name: 'getRole' })
+          uni.hideLoading()
+          const r = res && res.result ? res.result : {}
+          if (r.success && r.role === 'teacher') {
+            uni.setStorageSync('role', 'teacher')
+            uni.setStorageSync('openid', r.openid)
+            uni.navigateTo({ url: '/pages/teacher/teacher' })
+          } else {
+            this.showTeacherAuth = true
+          }
+        } catch (err) {
+          uni.hideLoading()
+          console.error(err)
+          uni.showToast({ title: '网络错误，请重试', icon: 'none' })
+        }
+      })
     },
     closeAuth() {
       this.showTeacherAuth = false
@@ -355,4 +392,29 @@ export default {
   overflow: visible;
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
+
+/* ========== 协议底部入口 ========== */
+.policy-footer {
+  margin-top: 64rpx;
+  padding: 0 20rpx;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.policy-footer-text {
+  font-size: 24rpx;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.policy-link {
+  font-size: 24rpx;
+  color: var(--primary);
+  font-weight: 600;
+  line-height: 1.6;
+}
+
 </style>

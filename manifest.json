@@ -13,7 +13,8 @@
             "es6" : true,
             "enhance" : true,
             "postcss" : true,
-            "minified" : true
+            "minified" : true,
+            "__usePrivacyCheck__" : true
         },
         "usingComponents" : true,
         "cloudfunctionRoot" : "cloudfunctions/"
