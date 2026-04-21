@@ -1,8 +1,5 @@
 <template>
   <view class="container">
-    <!-- 隐私授权弹层 -->
-    <privacy-popup />
-
     <text class="page-title">历史签到</text>
     <text class="page-subtitle">查看过去每次签到活动的详细记录</text>
 

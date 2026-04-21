@@ -1,10 +1,9 @@
 <template>
   <view class="container">
-    <!-- 隐私授权弹层 -->
-    <privacy-popup />
-
     <!-- 登录表单 -->
     <view v-if="!isLoggedIn" class="login-section">
+      <!-- 隐私授权弹层：仅在填写表单阶段出现 -->
+      <privacy-popup />
       <view class="login-header">
         <view class="login-icon-wrap">
           <text class="login-icon-text">&#x1F393;</text>
