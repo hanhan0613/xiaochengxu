@@ -4,7 +4,9 @@
     {
       "path": "pages/index/index",
       "style": {
-        "navigationBarTitleText": "签到打卡"
+        "navigationBarTitleText": "签到打卡",
+        "enableShareAppMessage": true,
+        "enableShareTimeline": true
       }
     },
     {

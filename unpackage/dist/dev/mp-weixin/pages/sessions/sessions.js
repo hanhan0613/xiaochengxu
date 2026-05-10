@@ -6,7 +6,8 @@ const _sfc_main = {
       sessions: [],
       isLoading: false,
       detailSession: null,
-      rosterFilter: "all"
+      rosterFilter: "all",
+      _lastTapInfo: { id: "", time: 0 }
     };
   },
   computed: {
@@ -38,6 +39,23 @@ const _sfc_main = {
     this.loadSessions();
   },
   methods: {
+    onRosterTap(item) {
+      const now = Date.now();
+      const last = this._lastTapInfo;
+      if (last.id === item._id && now - last.time < 350) {
+        this._lastTapInfo = { id: "", time: 0 };
+        if (!item.phone)
+          return;
+        common_vendor.index.setClipboardData({
+          data: String(item.phone),
+          success: () => {
+            common_vendor.index.showToast({ title: `已复制 ${item.phone}`, icon: "none" });
+          }
+        });
+      } else {
+        this._lastTapInfo = { id: item._id, time: now };
+      }
+    },
     async ensureTeacher() {
       let role = common_vendor.index.getStorageSync("role");
       if (role !== "teacher") {
@@ -48,7 +66,7 @@ const _sfc_main = {
           if (role === "teacher")
             common_vendor.index.setStorageSync("role", "teacher");
         } catch (err) {
-          common_vendor.index.__f__("error", "at pages/sessions/sessions.vue:180", err);
+          common_vendor.index.__f__("error", "at pages/sessions/sessions.vue:199", err);
         }
       }
       if (role !== "teacher") {
@@ -78,7 +96,7 @@ const _sfc_main = {
           common_vendor.index.showToast({ title: r.message || "加载失败", icon: "none" });
         }
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/sessions/sessions.vue:209", err);
+        common_vendor.index.__f__("error", "at pages/sessions/sessions.vue:228", err);
         common_vendor.index.showToast({ title: "加载失败", icon: "none" });
       }
       this.isLoading = false;
@@ -109,7 +127,7 @@ const _sfc_main = {
         }
       } catch (err) {
         common_vendor.index.hideLoading();
-        common_vendor.index.__f__("error", "at pages/sessions/sessions.vue:242", err);
+        common_vendor.index.__f__("error", "at pages/sessions/sessions.vue:261", err);
         common_vendor.index.showToast({ title: "加载失败", icon: "none" });
       }
     },
@@ -143,7 +161,7 @@ const _sfc_main = {
             }
           } catch (err) {
             common_vendor.index.hideLoading();
-            common_vendor.index.__f__("error", "at pages/sessions/sessions.vue:281", err);
+            common_vendor.index.__f__("error", "at pages/sessions/sessions.vue:300", err);
             common_vendor.index.showToast({ title: "网络错误", icon: "none" });
           }
         }
@@ -153,11 +171,13 @@ const _sfc_main = {
       if (!raw)
         return "";
       const d = new Date(raw);
-      const m = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      const h = String(d.getHours()).padStart(2, "0");
-      const mi = String(d.getMinutes()).padStart(2, "0");
-      return `${d.getFullYear()}-${m}-${day} ${h}:${mi}`;
+      const bj = new Date(d.getTime() + 8 * 60 * 60 * 1e3);
+      const y = bj.getUTCFullYear();
+      const m = String(bj.getUTCMonth() + 1).padStart(2, "0");
+      const day = String(bj.getUTCDate()).padStart(2, "0");
+      const h = String(bj.getUTCHours()).padStart(2, "0");
+      const mi = String(bj.getUTCMinutes()).padStart(2, "0");
+      return `${y}-${m}-${day} ${h}:${mi}`;
     },
     formatDateFull(raw) {
       return this.formatDate(raw);
@@ -166,9 +186,10 @@ const _sfc_main = {
       if (!raw)
         return "";
       const d = new Date(raw);
-      const h = String(d.getHours()).padStart(2, "0");
-      const mi = String(d.getMinutes()).padStart(2, "0");
-      const s = String(d.getSeconds()).padStart(2, "0");
+      const bj = new Date(d.getTime() + 8 * 60 * 60 * 1e3);
+      const h = String(bj.getUTCHours()).padStart(2, "0");
+      const mi = String(bj.getUTCMinutes()).padStart(2, "0");
+      const s = String(bj.getUTCSeconds()).padStart(2, "0");
       return `${h}:${mi}:${s}`;
     }
   }
@@ -197,7 +218,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
     }),
     c: $data.sessions.length === 0 && !$data.isLoading
   }, $data.sessions.length === 0 && !$data.isLoading ? {} : {}) : common_vendor.e({
-    d: common_vendor.o((...args) => $options.closeDetail && $options.closeDetail(...args), "ee"),
+    d: common_vendor.o((...args) => $options.closeDetail && $options.closeDetail(...args), "dc"),
     e: common_vendor.t($data.detailSession.session.title),
     f: common_vendor.t($options.formatDateFull($data.detailSession.session.createdAt)),
     g: $data.detailSession.session.endedAt
@@ -210,13 +231,13 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
     l: common_vendor.t($data.detailSession.session.attendanceRate),
     m: common_vendor.t($data.detailSession.roster.length),
     n: common_vendor.n($data.rosterFilter === "all" ? "pill-active" : ""),
-    o: common_vendor.o(($event) => $data.rosterFilter = "all", "a2"),
+    o: common_vendor.o(($event) => $data.rosterFilter = "all", "fd"),
     p: common_vendor.t($options.checkedCount),
     q: common_vendor.n($data.rosterFilter === "checked" ? "pill-active" : ""),
-    r: common_vendor.o(($event) => $data.rosterFilter = "checked", "b8"),
+    r: common_vendor.o(($event) => $data.rosterFilter = "checked", "46"),
     s: common_vendor.t($options.uncheckedCount),
     t: common_vendor.n($data.rosterFilter === "unchecked" ? "pill-active" : ""),
-    v: common_vendor.o(($event) => $data.rosterFilter = "unchecked", "0b"),
+    v: common_vendor.o(($event) => $data.rosterFilter = "unchecked", "43"),
     w: common_vendor.f($options.filteredRoster, (item, idx, i0) => {
       return common_vendor.e({
         a: common_vendor.t(idx + 1),
@@ -231,7 +252,8 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
         i: common_vendor.t($options.formatTime(item.checkInTime))
       } : {}, {
         j: common_vendor.n(!item.checkedIn ? "roster-item-miss" : ""),
-        k: item._id
+        k: item._id,
+        l: common_vendor.o(($event) => $options.onRosterTap(item), item._id)
       });
     }),
     x: $options.filteredRoster.length === 0

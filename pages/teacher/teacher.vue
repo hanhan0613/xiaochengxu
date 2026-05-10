@@ -392,8 +392,10 @@ export default {
     },
 
     formatTime(date) {
-      const h = date.getHours().toString().padStart(2, '0')
-      const m = date.getMinutes().toString().padStart(2, '0')
+      // 强制使用北京时间 (UTC+8) 显示，避免设备时区不一致导致时间错位
+      const bj = new Date(date.getTime() + 8 * 60 * 60 * 1000)
+      const h = bj.getUTCHours().toString().padStart(2, '0')
+      const m = bj.getUTCMinutes().toString().padStart(2, '0')
       return `${h}:${m}`
     },
 

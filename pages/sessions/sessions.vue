@@ -306,12 +306,15 @@ export default {
 
     formatDate(raw) {
       if (!raw) return ''
+      // 强制使用北京时间 (UTC+8)
       const d = new Date(raw)
-      const m = String(d.getMonth() + 1).padStart(2, '0')
-      const day = String(d.getDate()).padStart(2, '0')
-      const h = String(d.getHours()).padStart(2, '0')
-      const mi = String(d.getMinutes()).padStart(2, '0')
-      return `${d.getFullYear()}-${m}-${day} ${h}:${mi}`
+      const bj = new Date(d.getTime() + 8 * 60 * 60 * 1000)
+      const y = bj.getUTCFullYear()
+      const m = String(bj.getUTCMonth() + 1).padStart(2, '0')
+      const day = String(bj.getUTCDate()).padStart(2, '0')
+      const h = String(bj.getUTCHours()).padStart(2, '0')
+      const mi = String(bj.getUTCMinutes()).padStart(2, '0')
+      return `${y}-${m}-${day} ${h}:${mi}`
     },
 
     formatDateFull(raw) {
@@ -320,10 +323,12 @@ export default {
 
     formatTime(raw) {
       if (!raw) return ''
+      // 强制使用北京时间 (UTC+8)
       const d = new Date(raw)
-      const h = String(d.getHours()).padStart(2, '0')
-      const mi = String(d.getMinutes()).padStart(2, '0')
-      const s = String(d.getSeconds()).padStart(2, '0')
+      const bj = new Date(d.getTime() + 8 * 60 * 60 * 1000)
+      const h = String(bj.getUTCHours()).padStart(2, '0')
+      const mi = String(bj.getUTCMinutes()).padStart(2, '0')
+      const s = String(bj.getUTCSeconds()).padStart(2, '0')
       return `${h}:${mi}:${s}`
     }
   }
