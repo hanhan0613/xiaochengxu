@@ -241,31 +241,69 @@ export default {
     async uploadStudents() {
       if (this.parsedStudents.length === 0) return
       this.isUploading = true
-      uni.showLoading({ title: '上传中...', mask: true })
 
-      try {
-        const res = await wx.cloud.callFunction({
-          name: 'uploadStudents',
-          data: { students: this.parsedStudents }
-        })
+      // 分片上传：单次云函数调用最多 20 条，避免触发云函数超时 / 数据库限频
+      const CHUNK_SIZE = 20
+      const all = this.parsedStudents
+      const total = all.length
+      const chunks = []
+      for (let i = 0; i < total; i += CHUNK_SIZE) {
+        chunks.push(all.slice(i, i + CHUNK_SIZE))
+      }
 
-        uni.hideLoading()
+      let successCount = 0
+      let skipCount = 0
+      let appendedToSession = 0
+      let failedChunks = 0
 
-        if (res.result.success) {
-          uni.showModal({
-            title: '上传成功',
-            content: res.result.message,
-            showCancel: false
+      uni.showLoading({ title: `上传中 0/${total}`, mask: true })
+
+      for (let idx = 0; idx < chunks.length; idx++) {
+        const chunk = chunks[idx]
+        try {
+          const res = await wx.cloud.callFunction({
+            name: 'uploadStudents',
+            data: { students: chunk }
           })
-          this.parsedStudents = []
-          this.previewList = []
-          this.selectedFile = null
-        } else {
-          uni.showToast({ title: res.result.message || '上传失败', icon: 'none' })
+          const r = res && res.result ? res.result : {}
+          if (r.success) {
+            successCount += r.successCount || 0
+            skipCount += r.skipCount || 0
+            appendedToSession += r.appendedToSession || 0
+          } else {
+            failedChunks++
+            console.warn('[uploadStudents] 分片失败:', r.message)
+          }
+        } catch (err) {
+          failedChunks++
+          console.error('[uploadStudents] 分片异常:', err)
         }
-      } catch (err) {
-        uni.hideLoading()
-        console.error('上传失败:', err)
+        // 更新进度
+        const done = Math.min((idx + 1) * CHUNK_SIZE, total)
+        uni.showLoading({ title: `上传中 ${done}/${total}`, mask: true })
+      }
+
+      uni.hideLoading()
+
+      if (failedChunks === 0) {
+        let msg = `成功处理 ${successCount} 名学生`
+        if (skipCount > 0) msg += `，跳过 ${skipCount} 条无效数据`
+        if (appendedToSession > 0) msg += `；其中 ${appendedToSession} 名新学生已同步到当前活动`
+        uni.showModal({
+          title: '上传成功',
+          content: msg,
+          showCancel: false
+        })
+        this.parsedStudents = []
+        this.previewList = []
+        this.selectedFile = null
+      } else if (successCount > 0) {
+        uni.showModal({
+          title: '部分上传成功',
+          content: `已成功 ${successCount} 名，${failedChunks} 个分片失败，请稍后再试。`,
+          showCancel: false
+        })
+      } else {
         uni.showToast({ title: '上传失败，请重试', icon: 'none' })
       }
 

@@ -15,7 +15,8 @@ const _sfc_main = {
       showNewSessionModal: false,
       newSessionTitle: "",
       clearStudentsOption: false,
-      newSessionLoading: false
+      newSessionLoading: false,
+      _lastTapInfo: { id: "", time: 0 }
     };
   },
   computed: {
@@ -38,6 +39,23 @@ const _sfc_main = {
     });
   },
   methods: {
+    onStudentTap(item) {
+      const now = Date.now();
+      const last = this._lastTapInfo;
+      if (last.id === item._id && now - last.time < 350) {
+        this._lastTapInfo = { id: "", time: 0 };
+        if (!item.phone)
+          return;
+        common_vendor.index.setClipboardData({
+          data: String(item.phone),
+          success: () => {
+            common_vendor.index.showToast({ title: `已复制 ${item.phone}`, icon: "none" });
+          }
+        });
+      } else {
+        this._lastTapInfo = { id: item._id, time: now };
+      }
+    },
     async ensureTeacher() {
       let role = common_vendor.index.getStorageSync("role");
       if (role !== "teacher") {
@@ -48,7 +66,7 @@ const _sfc_main = {
           if (role === "teacher")
             common_vendor.index.setStorageSync("role", "teacher");
         } catch (err) {
-          common_vendor.index.__f__("error", "at pages/teacher/teacher.vue:215", err);
+          common_vendor.index.__f__("error", "at pages/teacher/teacher.vue:234", err);
         }
       }
       if (role !== "teacher") {
@@ -94,7 +112,7 @@ const _sfc_main = {
             }
           } catch (err) {
             common_vendor.index.hideLoading();
-            common_vendor.index.__f__("error", "at pages/teacher/teacher.vue:262", err);
+            common_vendor.index.__f__("error", "at pages/teacher/teacher.vue:281", err);
             common_vendor.index.showToast({ title: "网络错误", icon: "none" });
           }
         }
@@ -108,7 +126,7 @@ const _sfc_main = {
           this.currentSession = r.session;
         }
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/teacher/teacher.vue:277", "获取当前活动失败:", err);
+        common_vendor.index.__f__("error", "at pages/teacher/teacher.vue:296", "获取当前活动失败:", err);
       }
     },
     startNewSession() {
@@ -159,7 +177,7 @@ const _sfc_main = {
         }
       } catch (err) {
         this.newSessionLoading = false;
-        common_vendor.index.__f__("error", "at pages/teacher/teacher.vue:333", err);
+        common_vendor.index.__f__("error", "at pages/teacher/teacher.vue:352", err);
         common_vendor.index.showToast({ title: "网络错误", icon: "none" });
       }
     },
@@ -190,14 +208,15 @@ const _sfc_main = {
           this.hasMore = students.length < res.result.total;
         }
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/teacher/teacher.vue:368", "加载学生列表失败:", err);
+        common_vendor.index.__f__("error", "at pages/teacher/teacher.vue:387", "加载学生列表失败:", err);
         common_vendor.index.showToast({ title: "加载失败", icon: "none" });
       }
       this.isLoading = false;
     },
     formatTime(date) {
-      const h = date.getHours().toString().padStart(2, "0");
-      const m = date.getMinutes().toString().padStart(2, "0");
+      const bj = new Date(date.getTime() + 8 * 60 * 60 * 1e3);
+      const h = bj.getUTCHours().toString().padStart(2, "0");
+      const m = bj.getUTCMinutes().toString().padStart(2, "0");
       return `${h}:${m}`;
     },
     setFilter(filter) {
@@ -233,7 +252,7 @@ const _sfc_main = {
         scanType: ["qrCode"],
         success: async (res) => {
           try {
-            common_vendor.index.__f__("log", "at pages/teacher/teacher.vue:417", "[scan] raw:", res.result);
+            common_vendor.index.__f__("log", "at pages/teacher/teacher.vue:438", "[scan] raw:", res.result);
             const qrData = this.parseQRContent(res.result);
             if (!qrData || !qrData.studentId) {
               this.scanResult = { success: false, message: "无效的签到二维码" };
@@ -266,7 +285,7 @@ const _sfc_main = {
               this.scanResult = null;
             }, 3e3);
           } catch (err) {
-            common_vendor.index.__f__("error", "at pages/teacher/teacher.vue:450", "扫码处理失败:", err);
+            common_vendor.index.__f__("error", "at pages/teacher/teacher.vue:471", "扫码处理失败:", err);
             this.scanResult = { success: false, message: "扫码处理失败" };
             setTimeout(() => {
               this.scanResult = null;
@@ -329,7 +348,8 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
       }, item.checkedIn && item.checkInTimeStr ? {
         h: common_vendor.t(item.checkInTimeStr)
       } : {}, {
-        i: item._id
+        i: item._id,
+        j: common_vendor.o(($event) => $options.onStudentTap(item), item._id)
       });
     }),
     B: $data.students.length === 0 && !$data.isLoading
@@ -337,23 +357,23 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
     C: $data.hasMore
   }, $data.hasMore ? {
     D: common_vendor.t($data.isLoading ? "加载中..." : "加载更多"),
-    E: common_vendor.o((...args) => $options.loadMore && $options.loadMore(...args), "d2")
+    E: common_vendor.o((...args) => $options.loadMore && $options.loadMore(...args), "6a")
   } : {}, {
     F: $data.showNewSessionModal
   }, $data.showNewSessionModal ? common_vendor.e({
     G: $data.newSessionTitle,
-    H: common_vendor.o(($event) => $data.newSessionTitle = $event.detail.value, "5f"),
+    H: common_vendor.o(($event) => $data.newSessionTitle = $event.detail.value, "22"),
     I: $data.clearStudentsOption
   }, $data.clearStudentsOption ? {} : {}, {
     J: common_vendor.n($data.clearStudentsOption ? "ns-checkbox-on" : ""),
-    K: common_vendor.o((...args) => $options.toggleClearStudents && $options.toggleClearStudents(...args), "86"),
+    K: common_vendor.o((...args) => $options.toggleClearStudents && $options.toggleClearStudents(...args), "7b"),
     L: common_vendor.t($data.newSessionLoading ? "开启中..." : "确认开启"),
-    M: common_vendor.o((...args) => $options.submitNewSession && $options.submitNewSession(...args), "66"),
+    M: common_vendor.o((...args) => $options.submitNewSession && $options.submitNewSession(...args), "72"),
     N: $data.newSessionLoading,
-    O: common_vendor.o((...args) => $options.closeNewSessionModal && $options.closeNewSessionModal(...args), "bf"),
+    O: common_vendor.o((...args) => $options.closeNewSessionModal && $options.closeNewSessionModal(...args), "a5"),
     P: common_vendor.o(() => {
-    }, "da"),
-    Q: common_vendor.o((...args) => $options.closeNewSessionModal && $options.closeNewSessionModal(...args), "44")
+    }, "ce"),
+    Q: common_vendor.o((...args) => $options.closeNewSessionModal && $options.closeNewSessionModal(...args), "5f")
   }) : {});
 }
 const MiniProgramPage = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["render", _sfc_render], ["__scopeId", "data-v-c604c94d"]]);

@@ -69,6 +69,30 @@ export default {
       authLoading: false
     }
   },
+  onLoad() {
+    // 显式打开右上角"…"中的转发与朋友圈菜单
+    if (typeof wx !== 'undefined' && wx.showShareMenu) {
+      wx.showShareMenu({
+        withShareTicket: true,
+        menus: ['shareAppMessage', 'shareTimeline']
+      })
+    }
+  },
+  // 启用右上角菜单的"转发"按钮（默认是灰色不可用）
+  onShareAppMessage() {
+    return {
+      title: '签到打卡 — 一键扫码签到',
+      path: '/pages/index/index',
+      imageUrl: ''
+    }
+  },
+  // 启用"分享到朋友圈"
+  onShareTimeline() {
+    return {
+      title: '签到打卡 — 一键扫码签到',
+      query: ''
+    }
+  },
   methods: {
     goStudent() {
       uni.navigateTo({ url: '/pages/student/student' })

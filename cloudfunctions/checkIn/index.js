@@ -28,8 +28,10 @@ async function getOrCreateSession(openid) {
     console.log('[checkIn] sessions 查询异常，尝试创建：', e.message)
   }
 
+  // 云函数运行在 UTC 时区，转成北京时间 (UTC+8) 用于自动创建的活动标题
   const now = new Date()
-  const title = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} 签到`
+  const bj = new Date(now.getTime() + 8 * 60 * 60 * 1000)
+  const title = `${bj.getUTCFullYear()}-${String(bj.getUTCMonth() + 1).padStart(2, '0')}-${String(bj.getUTCDate()).padStart(2, '0')} ${String(bj.getUTCHours()).padStart(2, '0')}:${String(bj.getUTCMinutes()).padStart(2, '0')} 签到`
 
   // 快照当前全部学生
   let snapshot = []

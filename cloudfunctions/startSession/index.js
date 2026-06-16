@@ -44,10 +44,12 @@ exports.main = async (event, context) => {
   const { title, clearStudents } = event
 
   try {
+    // 云函数运行在 UTC 时区，需要手动转成北京时间 (UTC+8) 用于默认标题
     const now = new Date()
+    const bj = new Date(now.getTime() + 8 * 60 * 60 * 1000)
     const defaultTitle = title && title.trim()
       ? title.trim()
-      : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} 签到`
+      : `${bj.getUTCFullYear()}-${String(bj.getUTCMonth() + 1).padStart(2, '0')}-${String(bj.getUTCDate()).padStart(2, '0')} ${String(bj.getUTCHours()).padStart(2, '0')}:${String(bj.getUTCMinutes()).padStart(2, '0')} 签到`
 
     // 1. 结束所有仍为 active 的活动
     try {

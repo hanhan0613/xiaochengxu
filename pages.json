@@ -4,7 +4,9 @@
     {
       "path": "pages/index/index",
       "style": {
-        "navigationBarTitleText": "签到打卡"
+        "navigationBarTitleText": "签到打卡",
+        "enableShareAppMessage": true,
+        "enableShareTimeline": true
       }
     },
     {
@@ -39,11 +41,5 @@
     "navigationBarBackgroundColor": "#1CB0F6",
     "navigationBarTitleText": "签到打卡",
     "navigationBarTextStyle": "white"
-  },
-  "easycom": {
-    "autoscan": true,
-    "custom": {
-      "^privacy-(.*)": "@/components/privacy-$1/privacy-$1.vue"
-    }
   }
 }
