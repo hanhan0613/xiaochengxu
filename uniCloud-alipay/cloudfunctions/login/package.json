@@ -1,0 +1,6 @@
+{
+  "name": "login",
+  "version": "1.0.0",
+  "description": "学生登录验证（公开）",
+  "main": "index.js"
+}

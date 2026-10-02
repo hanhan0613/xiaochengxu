@@ -135,6 +135,8 @@
 </template>
 
 <script>
+import { callFunction, fetchRole } from '@/utils/cloud.js'
+
 export default {
   data() {
     return {
@@ -192,10 +194,8 @@ export default {
       let role = uni.getStorageSync('role')
       if (role !== 'teacher') {
         try {
-          const res = await wx.cloud.callFunction({ name: 'getRole' })
-          const r = res && res.result ? res.result : {}
+          const r = await fetchRole()
           role = r.role
-          if (role === 'teacher') uni.setStorageSync('role', 'teacher')
         } catch (err) { console.error(err) }
       }
       if (role !== 'teacher') {
@@ -214,10 +214,7 @@ export default {
       if (this.isLoading) return
       this.isLoading = true
       try {
-        const res = await wx.cloud.callFunction({
-          name: 'listSessions',
-          data: { page: 1, pageSize: 50 }
-        })
+        const res = await callFunction('listSessions', { page: 1, pageSize: 50 })
         const r = res && res.result ? res.result : {}
         if (r.success) {
           this.sessions = r.data || []
@@ -234,10 +231,7 @@ export default {
     async openDetail(session) {
       uni.showLoading({ title: '加载详情...' })
       try {
-        const res = await wx.cloud.callFunction({
-          name: 'getSessionDetail',
-          data: { sessionId: session._id }
-        })
+        const res = await callFunction('getSessionDetail', { sessionId: session._id })
         uni.hideLoading()
         const r = res && res.result ? res.result : {}
         if (r.success) {
@@ -282,10 +276,7 @@ export default {
           if (!res.confirm) return
           uni.showLoading({ title: '删除中...', mask: true })
           try {
-            const cloudRes = await wx.cloud.callFunction({
-              name: 'deleteSession',
-              data: { sessionId: session._id }
-            })
+            const cloudRes = await callFunction('deleteSession', { sessionId: session._id })
             uni.hideLoading()
             const r = cloudRes && cloudRes.result ? cloudRes.result : {}
             if (r.success) {
@@ -306,12 +297,15 @@ export default {
 
     formatDate(raw) {
       if (!raw) return ''
+      // 强制使用北京时间 (UTC+8)
       const d = new Date(raw)
-      const m = String(d.getMonth() + 1).padStart(2, '0')
-      const day = String(d.getDate()).padStart(2, '0')
-      const h = String(d.getHours()).padStart(2, '0')
-      const mi = String(d.getMinutes()).padStart(2, '0')
-      return `${d.getFullYear()}-${m}-${day} ${h}:${mi}`
+      const bj = new Date(d.getTime() + 8 * 60 * 60 * 1000)
+      const y = bj.getUTCFullYear()
+      const m = String(bj.getUTCMonth() + 1).padStart(2, '0')
+      const day = String(bj.getUTCDate()).padStart(2, '0')
+      const h = String(bj.getUTCHours()).padStart(2, '0')
+      const mi = String(bj.getUTCMinutes()).padStart(2, '0')
+      return `${y}-${m}-${day} ${h}:${mi}`
     },
 
     formatDateFull(raw) {
@@ -320,10 +314,12 @@ export default {
 
     formatTime(raw) {
       if (!raw) return ''
+      // 强制使用北京时间 (UTC+8)
       const d = new Date(raw)
-      const h = String(d.getHours()).padStart(2, '0')
-      const mi = String(d.getMinutes()).padStart(2, '0')
-      const s = String(d.getSeconds()).padStart(2, '0')
+      const bj = new Date(d.getTime() + 8 * 60 * 60 * 1000)
+      const h = String(bj.getUTCHours()).padStart(2, '0')
+      const mi = String(bj.getUTCMinutes()).padStart(2, '0')
+      const s = String(bj.getUTCSeconds()).padStart(2, '0')
       return `${h}:${mi}:${s}`
     }
   }

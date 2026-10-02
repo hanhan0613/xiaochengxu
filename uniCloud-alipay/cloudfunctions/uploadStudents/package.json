@@ -1,0 +1,6 @@
+{
+  "name": "uploadStudents",
+  "version": "1.0.0",
+  "description": "批量上传学生（教师专属）",
+  "main": "index.js"
+}

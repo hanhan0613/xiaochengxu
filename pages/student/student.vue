@@ -2,14 +2,12 @@
   <view class="container">
     <!-- 登录表单 -->
     <view v-if="!isLoggedIn" class="login-section">
-      <!-- 隐私授权弹层：仅在填写表单阶段出现 -->
-      <privacy-popup />
       <view class="login-header">
         <view class="login-icon-wrap">
           <text class="login-icon-text">&#x1F393;</text>
         </view>
         <text class="page-title">学生签到</text>
-        <text class="page-subtitle">输入姓名、手机号和核验码，生成签到码</text>
+        <text class="page-subtitle">输入姓名、手机号和密码，生成签到码</text>
       </view>
 
       <view class="card">
@@ -37,20 +35,49 @@
         </view>
 
         <view class="input-group">
-          <text class="input-label">核验码</text>
+          <text class="input-label">密码</text>
           <input
             class="input-field"
-            type="text"
-            placeholder="输入核验码"
+            type="number"
+            placeholder="输入4位数字密码"
+            maxlength="4"
             placeholder-class="input-placeholder"
             :adjust-position="true"
             v-model="code"
           />
         </view>
 
-        <button class="btn-primary" @click="doLogin" :disabled="isLoading">
-          {{ isLoading ? '验证中...' : '生成签到二维码' }}
+        <!-- 协议勾选 -->
+        <view class="agreement-row" @click="toggleAgree">
+          <view :class="['agreement-box', { 'agreement-box-checked': agreed }]">
+            <text v-if="agreed" class="agreement-check">&#x2713;</text>
+          </view>
+          <view class="agreement-text-wrap">
+            <text class="agreement-normal">我已阅读并同意</text>
+            <text class="agreement-link" @click.stop="openUserTerms">《用户服务协议》</text>
+            <text class="agreement-normal">及</text>
+            <text class="agreement-link" @click.stop="openPrivacyContract">《隐私政策》</text>
+          </view>
+        </view>
+
+        <button
+          class="btn-primary"
+          @click="doLogin"
+          :disabled="isLoading || !agreed"
+        >
+          {{ isLoading ? '验证中...' : (agreed ? '生成签到二维码' : '请先勾选协议') }}
         </button>
+      </view>
+    </view>
+
+    <!-- 用户服务协议弹层 -->
+    <view v-if="showTermsModal" class="terms-mask" @click="closeTermsModal">
+      <view class="terms-card" @click.stop>
+        <text class="terms-title">用户服务协议</text>
+        <scroll-view scroll-y class="terms-scroll">
+          <text class="terms-content">{{ userTermsContent }}</text>
+        </scroll-view>
+        <button class="btn-primary" @click="closeTermsModal">我已阅读</button>
       </view>
     </view>
 
@@ -102,13 +129,9 @@
 
 <script>
 import QRCode from '@/utils/qrcode.js'
-import PrivacyPopup from '@/components/privacy-popup/privacy-popup.vue'
+import { callFunction } from '@/utils/cloud.js'
 
 export default {
-  components: {
-    PrivacyPopup,
-    'privacy-popup': PrivacyPopup
-  },
   data() {
     return {
       name: '',
@@ -117,12 +140,35 @@ export default {
       isLoggedIn: false,
       isLoading: false,
       studentInfo: null,
-      phoneDisplay: ''
+      phoneDisplay: '',
+      agreed: false,
+      showTermsModal: false,
+      userTermsContent: [
+        '欢迎使用本签到打卡小程序！请在使用前仔细阅读以下服务协议。',
+        '',
+        '一、服务内容',
+        '本小程序为学生课堂签到打卡服务，提供学生端二维码生成、教师端扫码签到、签到历史查询等功能。',
+        '',
+        '二、用户行为规范',
+        '1. 您应如实填写姓名、手机号和密码，不得冒用他人身份。',
+        '2. 请勿将签到二维码用于作弊、代签等违反学校规定的行为。',
+        '3. 请勿对本小程序进行逆向工程、干扰正常服务。',
+        '',
+        '三、信息收集与使用',
+        '1. 我们仅收集实现签到功能所必需的信息：姓名、手机号、密码、微信账号标识（openid）。',
+        '2. 上述信息仅用于签到业务，不会用于其他目的，也不会向第三方提供。',
+        '3. 详细的个人信息处理规则请查阅《隐私政策》。',
+        '',
+        '四、服务变更与终止',
+        '我们有权根据业务需要调整或终止部分服务，并会在小程序内公告。',
+        '',
+        '五、免责声明',
+        '因不可抗力、网络故障等非开发者原因造成的服务中断，开发者不承担责任。',
+        '',
+        '六、联系方式',
+        '如对本协议有疑问，请联系所在学校或任课教师。'
+      ].join('\n')
     }
-  },
-
-  mounted() {
-    console.log('[student page] mounted, isLoggedIn =', this.isLoggedIn)
   },
 
   onShow() {
@@ -136,16 +182,41 @@ export default {
         : phoneStr
 
       // 只有未签到时才生成二维码
-      if (!cached.checkedIn) {
-        setTimeout(() => { this.generateQRCode(cached._id) }, 300)
-      }
-
       this.refreshStatus()
     }
   },
 
   methods: {
+    toggleAgree() {
+      this.agreed = !this.agreed
+    },
+
+    openUserTerms() {
+      this.showTermsModal = true
+    },
+
+    closeTermsModal() {
+      this.showTermsModal = false
+    },
+
+    openPrivacyContract() {
+      // 打开微信公众平台后台配置并发布的《隐私政策》
+      if (typeof wx === 'undefined' || !wx.openPrivacyContract) {
+        uni.showToast({ title: '当前微信版本不支持，请升级', icon: 'none' })
+        return
+      }
+      wx.openPrivacyContract({
+        fail: () => {
+          uni.showToast({ title: '打开隐私政策失败', icon: 'none' })
+        }
+      })
+    },
+
     async doLogin() {
+      if (!this.agreed) {
+        uni.showToast({ title: '请先勾选并同意协议', icon: 'none' })
+        return
+      }
       if (!this.name.trim()) {
         uni.showToast({ title: '请输入姓名', icon: 'none' })
         return
@@ -154,22 +225,19 @@ export default {
         uni.showToast({ title: '请输入手机号', icon: 'none' })
         return
       }
-      if (!this.code.trim()) {
-        uni.showToast({ title: '请输入核验码', icon: 'none' })
+      if (!/^\d{4}$/.test(this.code.trim())) {
+        uni.showToast({ title: '请输入4位数字密码', icon: 'none' })
         return
       }
 
       this.isLoading = true
 
       try {
-        const res = await wx.cloud.callFunction({
-          name: 'login',
-          data: {
-            name: this.name.trim(),
-            phone: this.phone.trim(),
-            code: this.code.trim()
-          }
-        })
+        const res = await callFunction('login', {
+          name: this.name.trim(),
+          phone: this.phone.replace(/\s+/g, ''),
+          code: this.code.trim()
+        }, { withOpenid: false })
 
         const result = res && res.result ? res.result : {}
 
@@ -190,7 +258,7 @@ export default {
 
           // 已签到就不生成二维码，直接显示"已签到"大字
           if (!student.checkedIn) {
-            setTimeout(() => { this.generateQRCode(student._id) }, 300)
+            setTimeout(() => { this.generateQRCode(student._id, student.qrToken) }, 300)
           }
         } else {
           const msg = result.message || '登录失败，请检查姓名和手机号是否正确'
@@ -205,7 +273,7 @@ export default {
       }
     },
 
-    generateQRCode(studentId) {
+    generateQRCode(studentId, qrToken) {
       const query = uni.createSelectorQuery().in(this)
       query.select('#qrCanvas')
         .fields({ node: true, size: true })
@@ -223,7 +291,7 @@ export default {
           ctx.scale(dpr, dpr)
 
           // 用紧凑格式，字符越少二维码越简单，扫码成功率越高
-          const qrData = `CKIN|${studentId}|${Date.now()}`
+          const qrData = `CKIN|${studentId}|${qrToken}`
           QRCode.draw(qrData, canvas, ctx, 500)
         })
     },
@@ -243,16 +311,13 @@ export default {
       uni.showLoading({ title: '刷新中...' })
 
       try {
-        const res = await wx.cloud.callFunction({
-          name: 'login',
-          data: {
-            name: this.studentInfo.name,
-            phone: this.studentInfo.phone,
-            code: this.studentInfo.code
-          }
-        })
+        const res = await callFunction('login', {
+          name: this.studentInfo.name,
+          phone: String(this.studentInfo.phone || '').replace(/\s+/g, ''),
+          code: this.studentInfo.code
+        }, { withOpenid: false })
 
-        if (res.result.success) {
+        if (res.result.success && res.result.student) {
           const refreshed = Object.assign({}, res.result.student, { code: this.studentInfo.code })
           this.studentInfo = refreshed
           uni.setStorageSync('studentInfo', refreshed)
@@ -260,12 +325,27 @@ export default {
           // 只要刷新后是未签到，就生成二维码
           // （覆盖"从未签到→未签到"和"从已签到被重置→未签到"两种情况）
           if (!res.result.student.checkedIn) {
-            setTimeout(() => { this.generateQRCode(res.result.student._id) }, 300)
+            setTimeout(() => {
+              this.generateQRCode(res.result.student._id, res.result.student.qrToken)
+            }, 300)
           }
           // 刷新后是已签到，页面自动切换到"已签到"视图，不需要二维码
+        } else {
+          uni.removeStorageSync('studentInfo')
+          this.isLoggedIn = false
+          this.studentInfo = null
+          this.phoneDisplay = ''
+          this.name = ''
+          this.phone = ''
+          this.code = ''
+          uni.showToast({ title: '学生信息已更新，请重新登录', icon: 'none' })
         }
       } catch (err) {
         console.error(err)
+        uni.removeStorageSync('studentInfo')
+        this.isLoggedIn = false
+        this.studentInfo = null
+        this.phoneDisplay = ''
       }
 
       uni.hideLoading()
@@ -518,5 +598,113 @@ export default {
   font-size: 26rpx;
   color: var(--text-secondary);
   letter-spacing: 2rpx;
+}
+
+/* ========== 协议勾选 ========== */
+.agreement-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 12rpx 4rpx 24rpx;
+  margin-top: 8rpx;
+}
+
+.agreement-box {
+  width: 32rpx;
+  height: 32rpx;
+  border: 2rpx solid var(--border-strong);
+  border-radius: 8rpx;
+  background: #fff;
+  margin-right: 16rpx;
+  margin-top: 4rpx;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.agreement-box-checked {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.agreement-check {
+  color: #fff;
+  font-size: 24rpx;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.agreement-text-wrap {
+  flex: 1;
+  font-size: 26rpx;
+  line-height: 1.6;
+}
+
+.agreement-normal {
+  color: var(--text-secondary);
+  font-size: 26rpx;
+}
+
+.agreement-link {
+  color: var(--primary);
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+/* ========== 用户服务协议弹层 ========== */
+.terms-mask {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.55);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60rpx 48rpx;
+}
+
+.terms-card {
+  width: 100%;
+  max-width: 640rpx;
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 40rpx 32rpx 32rpx;
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
+  box-shadow: 0 24rpx 64rpx rgba(15, 23, 42, 0.25);
+}
+
+.terms-title {
+  font-size: 36rpx;
+  font-weight: 800;
+  color: var(--text-primary);
+  text-align: center;
+  display: block;
+  margin-bottom: 24rpx;
+  letter-spacing: 1rpx;
+}
+
+.terms-scroll {
+  flex: 1;
+  max-height: 900rpx;
+  background: #F8FAFC;
+  border-radius: 16rpx;
+  padding: 24rpx 24rpx;
+  margin-bottom: 24rpx;
+  border: 2rpx solid var(--border);
+}
+
+.terms-content {
+  font-size: 26rpx;
+  line-height: 1.8;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-all;
+  display: block;
 }
 </style>

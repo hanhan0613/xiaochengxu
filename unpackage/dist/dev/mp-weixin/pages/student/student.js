@@ -1,48 +1,101 @@
 "use strict";
 const common_vendor = require("../../common/vendor.js");
 const utils_qrcode = require("../../utils/qrcode.js");
+const utils_cloud = require("../../utils/cloud.js");
 const _sfc_main = {
   data() {
     return {
       name: "",
       phone: "",
+      code: "",
       isLoggedIn: false,
       isLoading: false,
       studentInfo: null,
-      phoneDisplay: ""
+      phoneDisplay: "",
+      agreed: false,
+      showTermsModal: false,
+      userTermsContent: [
+        "欢迎使用本签到打卡小程序！请在使用前仔细阅读以下服务协议。",
+        "",
+        "一、服务内容",
+        "本小程序为学生课堂签到打卡服务，提供学生端二维码生成、教师端扫码签到、签到历史查询等功能。",
+        "",
+        "二、用户行为规范",
+        "1. 您应如实填写姓名、手机号和密码，不得冒用他人身份。",
+        "2. 请勿将签到二维码用于作弊、代签等违反学校规定的行为。",
+        "3. 请勿对本小程序进行逆向工程、干扰正常服务。",
+        "",
+        "三、信息收集与使用",
+        "1. 我们仅收集实现签到功能所必需的信息：姓名、手机号、密码、微信账号标识（openid）。",
+        "2. 上述信息仅用于签到业务，不会用于其他目的，也不会向第三方提供。",
+        "3. 详细的个人信息处理规则请查阅《隐私政策》。",
+        "",
+        "四、服务变更与终止",
+        "我们有权根据业务需要调整或终止部分服务，并会在小程序内公告。",
+        "",
+        "五、免责声明",
+        "因不可抗力、网络故障等非开发者原因造成的服务中断，开发者不承担责任。",
+        "",
+        "六、联系方式",
+        "如对本协议有疑问，请联系所在学校或任课教师。"
+      ].join("\n")
     };
   },
   onShow() {
     const cached = common_vendor.index.getStorageSync("studentInfo");
     if (cached) {
-      const phoneStr = cached.phone;
+      const phoneStr = (cached.phone || "").toString();
       this.isLoggedIn = true;
       this.studentInfo = cached;
-      this.phoneDisplay = phoneStr.substring(0, 3) + "****" + phoneStr.substring(7);
-      if (!cached.checkedIn) {
-        setTimeout(() => {
-          this.generateQRCode(cached._id);
-        }, 300);
-      }
+      this.phoneDisplay = phoneStr.length >= 11 ? phoneStr.substring(0, 3) + "****" + phoneStr.substring(7) : phoneStr;
       this.refreshStatus();
     }
   },
   methods: {
+    toggleAgree() {
+      this.agreed = !this.agreed;
+    },
+    openUserTerms() {
+      this.showTermsModal = true;
+    },
+    closeTermsModal() {
+      this.showTermsModal = false;
+    },
+    openPrivacyContract() {
+      if (typeof common_vendor.wx$1 === "undefined" || !common_vendor.wx$1.openPrivacyContract) {
+        common_vendor.index.showToast({ title: "当前微信版本不支持，请升级", icon: "none" });
+        return;
+      }
+      common_vendor.wx$1.openPrivacyContract({
+        fail: () => {
+          common_vendor.index.showToast({ title: "打开隐私政策失败", icon: "none" });
+        }
+      });
+    },
     async doLogin() {
+      if (!this.agreed) {
+        common_vendor.index.showToast({ title: "请先勾选并同意协议", icon: "none" });
+        return;
+      }
       if (!this.name.trim()) {
         common_vendor.index.showToast({ title: "请输入姓名", icon: "none" });
         return;
       }
-      if (!this.phone.trim() || this.phone.length !== 11) {
-        common_vendor.index.showToast({ title: "请输入正确的手机号", icon: "none" });
+      if (!this.phone.trim()) {
+        common_vendor.index.showToast({ title: "请输入手机号", icon: "none" });
+        return;
+      }
+      if (!/^\d{4}$/.test(this.code.trim())) {
+        common_vendor.index.showToast({ title: "请输入4位数字密码", icon: "none" });
         return;
       }
       this.isLoading = true;
       try {
-        const res = await common_vendor.wx$1.cloud.callFunction({
-          name: "login",
-          data: { name: this.name.trim(), phone: this.phone.trim() }
-        });
+        const res = await utils_cloud.callFunction("login", {
+          name: this.name.trim(),
+          phone: this.phone.replace(/\s+/g, ""),
+          code: this.code.trim()
+        }, { withOpenid: false });
         const result = res && res.result ? res.result : {};
         if (result.success && result.student) {
           const student = result.student;
@@ -51,10 +104,12 @@ const _sfc_main = {
           this.studentInfo = student;
           this.phoneDisplay = phoneStr.length >= 11 ? phoneStr.substring(0, 3) + "****" + phoneStr.substring(7) : phoneStr;
           this.isLoading = false;
-          common_vendor.index.setStorageSync("studentInfo", student);
+          const toCache = Object.assign({}, student, { code: this.code.trim() });
+          common_vendor.index.setStorageSync("studentInfo", toCache);
+          this.studentInfo = toCache;
           if (!student.checkedIn) {
             setTimeout(() => {
-              this.generateQRCode(student._id);
+              this.generateQRCode(student._id, student.qrToken);
             }, 300);
           }
         } else {
@@ -63,17 +118,17 @@ const _sfc_main = {
           this.isLoading = false;
         }
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/student/student.vue:165", "登录失败:", err);
+        common_vendor.index.__f__("error", "at pages/student/student.vue:269", "登录失败:", err);
         const errMsg = err && err.errMsg ? err.errMsg : "网络错误，请重试";
         common_vendor.index.showToast({ title: errMsg, icon: "none", duration: 2e3 });
         this.isLoading = false;
       }
     },
-    generateQRCode(studentId) {
+    generateQRCode(studentId, qrToken) {
       const query = common_vendor.index.createSelectorQuery().in(this);
       query.select("#qrCanvas").fields({ node: true, size: true }).exec((res) => {
         if (!res[0]) {
-          common_vendor.index.__f__("error", "at pages/student/student.vue:178", "Canvas 未找到");
+          common_vendor.index.__f__("error", "at pages/student/student.vue:282", "Canvas 未找到");
           return;
         }
         const canvas = res[0].node;
@@ -83,7 +138,7 @@ const _sfc_main = {
         canvas.width = 500 * dpr;
         canvas.height = 500 * dpr;
         ctx.scale(dpr, dpr);
-        const qrData = `CKIN|${studentId}|${Date.now()}`;
+        const qrData = `CKIN|${studentId}|${qrToken}`;
         utils_qrcode.QRCode.draw(qrData, canvas, ctx, 500);
       });
     },
@@ -93,6 +148,7 @@ const _sfc_main = {
       this.studentInfo = null;
       this.name = "";
       this.phone = "";
+      this.code = "";
       this.phoneDisplay = "";
     },
     async refreshStatus() {
@@ -100,21 +156,36 @@ const _sfc_main = {
         return;
       common_vendor.index.showLoading({ title: "刷新中..." });
       try {
-        const res = await common_vendor.wx$1.cloud.callFunction({
-          name: "login",
-          data: { name: this.studentInfo.name, phone: this.studentInfo.phone }
-        });
-        if (res.result.success) {
-          this.studentInfo = res.result.student;
-          common_vendor.index.setStorageSync("studentInfo", res.result.student);
+        const res = await utils_cloud.callFunction("login", {
+          name: this.studentInfo.name,
+          phone: String(this.studentInfo.phone || "").replace(/\s+/g, ""),
+          code: this.studentInfo.code
+        }, { withOpenid: false });
+        if (res.result.success && res.result.student) {
+          const refreshed = Object.assign({}, res.result.student, { code: this.studentInfo.code });
+          this.studentInfo = refreshed;
+          common_vendor.index.setStorageSync("studentInfo", refreshed);
           if (!res.result.student.checkedIn) {
             setTimeout(() => {
-              this.generateQRCode(res.result.student._id);
+              this.generateQRCode(res.result.student._id, res.result.student.qrToken);
             }, 300);
           }
+        } else {
+          common_vendor.index.removeStorageSync("studentInfo");
+          this.isLoggedIn = false;
+          this.studentInfo = null;
+          this.phoneDisplay = "";
+          this.name = "";
+          this.phone = "";
+          this.code = "";
+          common_vendor.index.showToast({ title: "学生信息已更新，请重新登录", icon: "none" });
         }
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/student/student.vue:226", err);
+        common_vendor.index.__f__("error", "at pages/student/student.vue:344", err);
+        common_vendor.index.removeStorageSync("studentInfo");
+        this.isLoggedIn = false;
+        this.studentInfo = null;
+        this.phoneDisplay = "";
       }
       common_vendor.index.hideLoading();
     }
@@ -123,28 +194,46 @@ const _sfc_main = {
 function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
   return common_vendor.e({
     a: !$data.isLoggedIn
-  }, !$data.isLoggedIn ? {
+  }, !$data.isLoggedIn ? common_vendor.e({
     b: $data.name,
-    c: common_vendor.o(($event) => $data.name = $event.detail.value, "76"),
+    c: common_vendor.o(($event) => $data.name = $event.detail.value, "b2"),
     d: $data.phone,
-    e: common_vendor.o(($event) => $data.phone = $event.detail.value, "9f"),
-    f: common_vendor.t($data.isLoading ? "验证中..." : "生成签到二维码"),
-    g: common_vendor.o((...args) => $options.doLogin && $options.doLogin(...args), "5e"),
-    h: $data.isLoading
+    e: common_vendor.o(($event) => $data.phone = $event.detail.value, "5b"),
+    f: $data.code,
+    g: common_vendor.o(($event) => $data.code = $event.detail.value, "ae"),
+    h: $data.agreed
+  }, $data.agreed ? {} : {}, {
+    i: common_vendor.n({
+      "agreement-box-checked": $data.agreed
+    }),
+    j: common_vendor.o((...args) => $options.openUserTerms && $options.openUserTerms(...args), "ae"),
+    k: common_vendor.o((...args) => $options.openPrivacyContract && $options.openPrivacyContract(...args), "c6"),
+    l: common_vendor.o((...args) => $options.toggleAgree && $options.toggleAgree(...args), "03"),
+    m: common_vendor.t($data.isLoading ? "验证中..." : $data.agreed ? "生成签到二维码" : "请先勾选协议"),
+    n: common_vendor.o((...args) => $options.doLogin && $options.doLogin(...args), "b5"),
+    o: $data.isLoading || !$data.agreed
+  }) : {}, {
+    p: $data.showTermsModal
+  }, $data.showTermsModal ? {
+    q: common_vendor.t($data.userTermsContent),
+    r: common_vendor.o((...args) => $options.closeTermsModal && $options.closeTermsModal(...args), "c7"),
+    s: common_vendor.o(() => {
+    }, "7b"),
+    t: common_vendor.o((...args) => $options.closeTermsModal && $options.closeTermsModal(...args), "f9")
   } : {}, {
-    i: $data.isLoggedIn
+    v: $data.isLoggedIn
   }, $data.isLoggedIn ? common_vendor.e({
-    j: $data.studentInfo && $data.studentInfo.checkedIn
+    w: $data.studentInfo && $data.studentInfo.checkedIn
   }, $data.studentInfo && $data.studentInfo.checkedIn ? {
-    k: common_vendor.t($data.studentInfo.name),
-    l: common_vendor.t($data.phoneDisplay)
+    x: common_vendor.t($data.studentInfo.name),
+    y: common_vendor.t($data.phoneDisplay)
   } : {
-    m: common_vendor.t($data.studentInfo.name),
-    n: common_vendor.t($data.studentInfo.name),
-    o: common_vendor.t($data.phoneDisplay)
+    z: common_vendor.t($data.studentInfo.name),
+    A: common_vendor.t($data.studentInfo.name),
+    B: common_vendor.t($data.phoneDisplay)
   }, {
-    p: common_vendor.o((...args) => $options.refreshStatus && $options.refreshStatus(...args), "56"),
-    q: common_vendor.o((...args) => $options.doLogout && $options.doLogout(...args), "69")
+    C: common_vendor.o((...args) => $options.refreshStatus && $options.refreshStatus(...args), "4e"),
+    D: common_vendor.o((...args) => $options.doLogout && $options.doLogout(...args), "e1")
   }) : {});
 }
 const MiniProgramPage = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["render", _sfc_render], ["__scopeId", "data-v-809c9d48"]]);

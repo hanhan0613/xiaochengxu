@@ -133,8 +133,12 @@
 .cell-name.data-v-dbc77958 { flex: 1; min-width: 0; font-weight: 600; color: var(--text-primary);
 }
 .cell-phone.data-v-dbc77958 {
-  width: 240rpx; flex-shrink: 0; text-align: right;
+  width: 200rpx; flex-shrink: 0; text-align: right;
   color: var(--text-secondary); letter-spacing: 1rpx;
+}
+.cell-code.data-v-dbc77958 {
+  width: 140rpx; flex-shrink: 0; text-align: right;
+  color: var(--primary-dark); font-weight: 600; letter-spacing: 1rpx;
 }
 .preview-tbl-more.data-v-dbc77958 {
   text-align: center;

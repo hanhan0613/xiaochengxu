@@ -1,0 +1,6 @@
+{
+  "name": "endSession",
+  "version": "1.0.0",
+  "description": "结束当前活动",
+  "main": "index.js"
+}

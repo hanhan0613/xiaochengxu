@@ -1,0 +1,6 @@
+{
+  "name": "checkIn",
+  "version": "1.0.0",
+  "description": "扫码签到",
+  "main": "index.js"
+}

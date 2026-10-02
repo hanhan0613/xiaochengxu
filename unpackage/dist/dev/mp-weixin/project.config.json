@@ -12,7 +12,8 @@
       "outputPath": ""
     },
     "useCompilerPlugins": false,
-    "minifyWXML": true
+    "minifyWXML": true,
+    "__usePrivacyCheck__": true
   },
   "compileType": "miniprogram",
   "simulatorPluginLibVersion": {},
@@ -21,7 +22,5 @@
     "include": []
   },
   "appid": "wxc977b49ec4a99643",
-  "cloudfunctionRoot": "cloudfunctions/",
-  "cloud": true,
   "editorSetting": {}
 }

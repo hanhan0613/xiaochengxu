@@ -1,0 +1,6 @@
+{
+  "name": "deleteSession",
+  "version": "1.0.0",
+  "description": "删除指定活动",
+  "main": "index.js"
+}

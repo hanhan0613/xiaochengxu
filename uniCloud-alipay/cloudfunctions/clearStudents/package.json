@@ -1,0 +1,6 @@
+{
+  "name": "clearStudents",
+  "version": "1.0.0",
+  "description": "清空学生数据",
+  "main": "index.js"
+}
