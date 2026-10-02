@@ -1,5 +1,6 @@
 "use strict";
 const common_vendor = require("../../common/vendor.js");
+const utils_cloud = require("../../utils/cloud.js");
 const _sfc_main = {
   data() {
     return {
@@ -16,6 +17,7 @@ const _sfc_main = {
       newSessionTitle: "",
       clearStudentsOption: false,
       newSessionLoading: false,
+      isScanning: false,
       _lastTapInfo: { id: "", time: 0 }
     };
   },
@@ -60,13 +62,10 @@ const _sfc_main = {
       let role = common_vendor.index.getStorageSync("role");
       if (role !== "teacher") {
         try {
-          const res = await common_vendor.wx$1.cloud.callFunction({ name: "getRole" });
-          const r = res && res.result ? res.result : {};
+          const r = await utils_cloud.fetchRole();
           role = r.role;
-          if (role === "teacher")
-            common_vendor.index.setStorageSync("role", "teacher");
         } catch (err) {
-          common_vendor.index.__f__("error", "at pages/teacher/teacher.vue:234", err);
+          common_vendor.index.__f__("error", "at pages/teacher/teacher.vue:235", err);
         }
       }
       if (role !== "teacher") {
@@ -101,7 +100,7 @@ const _sfc_main = {
             return;
           common_vendor.index.showLoading({ title: "结束中...", mask: true });
           try {
-            const cloudRes = await common_vendor.wx$1.cloud.callFunction({ name: "endSession" });
+            const cloudRes = await utils_cloud.callFunction("endSession");
             common_vendor.index.hideLoading();
             const r = cloudRes && cloudRes.result ? cloudRes.result : {};
             if (r.success) {
@@ -112,7 +111,7 @@ const _sfc_main = {
             }
           } catch (err) {
             common_vendor.index.hideLoading();
-            common_vendor.index.__f__("error", "at pages/teacher/teacher.vue:281", err);
+            common_vendor.index.__f__("error", "at pages/teacher/teacher.vue:282", err);
             common_vendor.index.showToast({ title: "网络错误", icon: "none" });
           }
         }
@@ -120,13 +119,13 @@ const _sfc_main = {
     },
     async loadCurrentSession() {
       try {
-        const res = await common_vendor.wx$1.cloud.callFunction({ name: "getCurrentSession" });
+        const res = await utils_cloud.callFunction("getCurrentSession");
         const r = res && res.result ? res.result : {};
         if (r.success) {
           this.currentSession = r.session;
         }
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/teacher/teacher.vue:296", "获取当前活动失败:", err);
+        common_vendor.index.__f__("error", "at pages/teacher/teacher.vue:297", "获取当前活动失败:", err);
       }
     },
     startNewSession() {
@@ -157,12 +156,9 @@ const _sfc_main = {
       }
       this.newSessionLoading = true;
       try {
-        const cloudRes = await common_vendor.wx$1.cloud.callFunction({
-          name: "startSession",
-          data: {
-            title: this.newSessionTitle.trim(),
-            clearStudents: this.clearStudentsOption
-          }
+        const cloudRes = await utils_cloud.callFunction("startSession", {
+          title: this.newSessionTitle.trim(),
+          clearStudents: this.clearStudentsOption
         });
         const r = cloudRes && cloudRes.result ? cloudRes.result : {};
         if (r.success) {
@@ -177,7 +173,7 @@ const _sfc_main = {
         }
       } catch (err) {
         this.newSessionLoading = false;
-        common_vendor.index.__f__("error", "at pages/teacher/teacher.vue:352", err);
+        common_vendor.index.__f__("error", "at pages/teacher/teacher.vue:350", err);
         common_vendor.index.showToast({ title: "网络错误", icon: "none" });
       }
     },
@@ -187,9 +183,10 @@ const _sfc_main = {
       const page = refresh ? 1 : this.page;
       this.isLoading = true;
       try {
-        const res = await common_vendor.wx$1.cloud.callFunction({
-          name: "getStudents",
-          data: { page, pageSize: this.pageSize, filter: this.filter }
+        const res = await utils_cloud.callFunction("getStudents", {
+          page,
+          pageSize: this.pageSize,
+          filter: this.filter
         });
         if (res.result.success) {
           let students = res.result.data.map((s) => {
@@ -208,7 +205,7 @@ const _sfc_main = {
           this.hasMore = students.length < res.result.total;
         }
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/teacher/teacher.vue:387", "加载学生列表失败:", err);
+        common_vendor.index.__f__("error", "at pages/teacher/teacher.vue:386", "加载学生列表失败:", err);
         common_vendor.index.showToast({ title: "加载失败", icon: "none" });
       }
       this.isLoading = false;
@@ -235,64 +232,89 @@ const _sfc_main = {
         const parts = raw.split("|");
         if (parts.length < 3)
           return null;
-        return { studentId: parts[1], timestamp: Number(parts[2]) };
+        return { studentId: parts[1], token: parts[2] };
       }
       try {
         const obj = JSON.parse(raw);
         if (obj && obj.type === "checkin" && obj.studentId) {
-          return { studentId: obj.studentId, timestamp: Number(obj.timestamp) || 0 };
+          return { studentId: obj.studentId, token: obj.token || "" };
         }
       } catch (e) {
       }
       return null;
     },
+    updateLocalCheckIn(studentId) {
+      const now = Date.now();
+      this.students = this.students.map((item) => {
+        if (item._id !== studentId || item.checkedIn)
+          return item;
+        return Object.assign({}, item, {
+          checkedIn: true,
+          checkInTime: now,
+          checkInTimeStr: this.formatTime(new Date(now))
+        });
+      });
+      this.stats.checked = Math.min(this.stats.total, this.stats.checked + 1);
+      this.stats.unchecked = Math.max(0, this.stats.total - this.stats.checked);
+      if (this.currentSession) {
+        this.currentSession.checkedCount = Math.min(
+          this.currentSession.totalStudents,
+          (this.currentSession.checkedCount || 0) + 1
+        );
+      }
+    },
+    continueScanning() {
+      setTimeout(() => this.scanQRCode(), 300);
+    },
     scanQRCode() {
+      if (this.isScanning)
+        return;
+      this.isScanning = true;
       common_vendor.index.scanCode({
         onlyFromCamera: true,
         scanType: ["qrCode"],
         success: async (res) => {
           try {
-            common_vendor.index.__f__("log", "at pages/teacher/teacher.vue:438", "[scan] raw:", res.result);
+            common_vendor.index.__f__("log", "at pages/teacher/teacher.vue:463", "[scan] raw:", res.result);
             const qrData = this.parseQRContent(res.result);
             if (!qrData || !qrData.studentId) {
               this.scanResult = { success: false, message: "无效的签到二维码" };
               setTimeout(() => {
                 this.scanResult = null;
               }, 3e3);
-              return;
-            }
-            const now = Date.now();
-            if (qrData.timestamp && now - qrData.timestamp > 5 * 60 * 1e3) {
-              this.scanResult = { success: false, message: "二维码已过期，请让学生重新生成" };
-              setTimeout(() => {
-                this.scanResult = null;
-              }, 3e3);
+              this.isScanning = false;
+              this.continueScanning();
               return;
             }
             common_vendor.index.showLoading({ title: "签到中..." });
-            const checkInRes = await common_vendor.wx$1.cloud.callFunction({
-              name: "checkIn",
-              data: { studentId: qrData.studentId }
+            const checkInRes = await utils_cloud.callFunction("checkIn", {
+              studentId: qrData.studentId,
+              qrToken: qrData.token
             });
             common_vendor.index.hideLoading();
             this.scanResult = checkInRes.result;
             if (checkInRes.result.success) {
               common_vendor.index.showToast({ title: "签到成功！", icon: "success" });
-              this.loadCurrentSession();
-              this.loadStudents(true);
+              this.updateLocalCheckIn(qrData.studentId);
             }
             setTimeout(() => {
               this.scanResult = null;
             }, 3e3);
+            this.isScanning = false;
+            this.continueScanning();
           } catch (err) {
-            common_vendor.index.__f__("error", "at pages/teacher/teacher.vue:471", "扫码处理失败:", err);
+            common_vendor.index.hideLoading();
+            common_vendor.index.__f__("error", "at pages/teacher/teacher.vue:493", "扫码处理失败:", err);
             this.scanResult = { success: false, message: "扫码处理失败" };
             setTimeout(() => {
               this.scanResult = null;
             }, 3e3);
+            this.isScanning = false;
+            this.continueScanning();
           }
         },
         fail: (err) => {
+          this.isScanning = false;
           if (err.errMsg && err.errMsg.indexOf("cancel") === -1) {
             common_vendor.index.showToast({ title: "扫码失败", icon: "none" });
           }

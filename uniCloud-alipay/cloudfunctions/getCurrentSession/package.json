@@ -1,0 +1,6 @@
+{
+  "name": "getCurrentSession",
+  "version": "1.0.0",
+  "description": "获取当前进行中的活动",
+  "main": "index.js"
+}

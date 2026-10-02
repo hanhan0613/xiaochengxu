@@ -6,7 +6,7 @@
     <!-- Excel上传区域 -->
     <view class="card">
       <text class="card-heading">上传学生名单</text>
-      <text class="card-desc">支持 .xlsx 格式，表头需包含"姓名"、"手机号"和"核验码"列</text>
+      <text class="card-desc">支持 .xlsx 格式，表头需包含“姓名”、“手机号”和“密码”列</text>
 
       <view class="upload-zone" @click="chooseExcel" hover-class="upload-zone-active">
         <text class="upload-big-icon">&#x1F4C1;</text>
@@ -29,7 +29,7 @@
             <text class="preview-cell cell-idx">#</text>
             <text class="preview-cell cell-name">姓名</text>
             <text class="preview-cell cell-phone">手机号</text>
-            <text class="preview-cell cell-code">核验码</text>
+            <text class="preview-cell cell-code">密码</text>
           </view>
           <view class="preview-tbl-row" v-for="(item, index) in previewList" :key="index">
             <text class="preview-cell cell-idx">{{ index + 1 }}</text>
@@ -67,7 +67,7 @@
         <text class="input-label">手机号</text>
         <input
           class="input-field"
-          type="text"
+          type="number"
           placeholder="输入手机号"
           placeholder-class="input-placeholder"
           :adjust-position="true"
@@ -76,11 +76,12 @@
       </view>
 
       <view class="input-group">
-        <text class="input-label">核验码</text>
+        <text class="input-label">密码</text>
         <input
           class="input-field"
-          type="text"
-          placeholder="输入核验码（用于学生签到）"
+          type="number"
+          placeholder="输入4位数字密码"
+          maxlength="4"
           placeholder-class="input-placeholder"
           :adjust-position="true"
           v-model="manualCode"
@@ -102,6 +103,7 @@
 
 <script>
 import * as XLSX from 'xlsx'
+import { callFunction, fetchRole } from '@/utils/cloud.js'
 
 export default {
   data() {
@@ -128,10 +130,8 @@ export default {
       let role = uni.getStorageSync('role')
       if (role !== 'teacher') {
         try {
-          const res = await wx.cloud.callFunction({ name: 'getRole' })
-          const r = res && res.result ? res.result : {}
+          const r = await fetchRole()
           role = r.role
-          if (role === 'teacher') uni.setStorageSync('role', 'teacher')
         } catch (err) {
           console.error(err)
         }
@@ -176,7 +176,7 @@ export default {
       })
     },
 
-    parseExcel(filePath) {
+    async parseExcel(filePath) {
       uni.showLoading({ title: '解析中...' })
 
       try {
@@ -212,19 +212,50 @@ export default {
           uni.hideLoading()
           uni.showModal({
             title: '格式不正确',
-            content: `未找到"姓名"、"手机号"或"核验码"列。检测到的列名：${keys.join('、')}`,
+            content: `未找到“姓名”、“手机号”或“密码”列。检测到的列名：${keys.join('、')}`,
             showCancel: false
           })
           return
         }
 
-        const students = data
-          .map(row => ({
+        const parsedRows = data
+          .map((row, index) => ({
+            rowNumber: index + 2,
             name: (row[nameKey] || '').toString().trim(),
-            phone: (row[phoneKey] || '').toString().trim(),
-            code: (row[codeKey] || '').toString().trim()
+            phone: (row[phoneKey] || '').toString().replace(/\s+/g, ''),
+            code: (row[codeKey] || '').toString().trim().replace(/^\d{1,4}$/, value => value.padStart(4, '0'))
           }))
-          .filter(s => s.name && s.phone && s.code)
+        const invalidCodeRows = parsedRows.filter(s => !/^\d{4}$/.test(s.code))
+        const missingIdentityRows = parsedRows.filter(s => !s.name || !s.phone)
+        const students = parsedRows.filter(s => s.name && s.phone && /^\d{4}$/.test(s.code))
+        const duplicateKeys = new Set()
+        const duplicateRows = students.filter(s => {
+          const key = `${s.name}__${s.phone}`
+          const duplicate = duplicateKeys.has(key)
+          duplicateKeys.add(key)
+          return duplicate
+        })
+
+        if (invalidCodeRows.length || missingIdentityRows.length || duplicateRows.length) {
+          const details = [
+            invalidCodeRows.length ? `密码不是4位数字（第${invalidCodeRows.map(s => s.rowNumber).join('、')}行，不导入）` : '',
+            missingIdentityRows.length ? `姓名或手机号为空（第${missingIdentityRows.map(s => s.rowNumber).join('、')}行，不导入）` : '',
+            duplicateRows.length ? `姓名和手机号同时重复（第${duplicateRows.map(s => s.rowNumber).join('、')}行，后面的记录覆盖前面的记录）` : ''
+          ].filter(Boolean).join('；')
+          const confirmed = await new Promise(resolve => {
+            uni.showModal({
+              title: '导入数据提示',
+              content: `${details}。是否继续导入？`,
+              confirmText: '继续导入',
+              cancelText: '取消',
+              success: res => resolve(res.confirm)
+            })
+          })
+          if (!confirmed) {
+            uni.hideLoading()
+            return
+          }
+        }
 
         this.parsedStudents = students
         this.previewList = students.slice(0, 5)
@@ -253,6 +284,7 @@ export default {
 
       let successCount = 0
       let skipCount = 0
+      let updateCount = 0
       let appendedToSession = 0
       let failedChunks = 0
 
@@ -261,14 +293,12 @@ export default {
       for (let idx = 0; idx < chunks.length; idx++) {
         const chunk = chunks[idx]
         try {
-          const res = await wx.cloud.callFunction({
-            name: 'uploadStudents',
-            data: { students: chunk }
-          })
+          const res = await callFunction('uploadStudents', { students: chunk })
           const r = res && res.result ? res.result : {}
           if (r.success) {
             successCount += r.successCount || 0
             skipCount += r.skipCount || 0
+            updateCount += r.updateCount || 0
             appendedToSession += r.appendedToSession || 0
           } else {
             failedChunks++
@@ -319,23 +349,20 @@ export default {
         uni.showToast({ title: '请输入手机号', icon: 'none' })
         return
       }
-      if (!this.manualCode.trim()) {
-        uni.showToast({ title: '请输入核验码', icon: 'none' })
+      if (!/^\d{4}$/.test(this.manualCode.trim())) {
+        uni.showToast({ title: '请输入4位数字密码', icon: 'none' })
         return
       }
 
       this.isAdding = true
 
       try {
-        const res = await wx.cloud.callFunction({
-          name: 'uploadStudents',
-          data: {
-            students: [{
-              name: this.manualName.trim(),
-              phone: this.manualPhone.trim(),
-              code: this.manualCode.trim()
-            }]
-          }
+        const res = await callFunction('uploadStudents', {
+          students: [{
+            name: this.manualName.trim(),
+            phone: this.manualPhone.replace(/\s+/g, ''),
+            code: this.manualCode.trim()
+          }]
         })
 
         if (res.result.success) {

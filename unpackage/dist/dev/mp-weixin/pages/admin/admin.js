@@ -1,5 +1,6 @@
 "use strict";
 const common_vendor = require("../../common/vendor.js");
+const utils_cloud = require("../../utils/cloud.js");
 const _sfc_main = {
   data() {
     return {
@@ -23,11 +24,8 @@ const _sfc_main = {
       let role = common_vendor.index.getStorageSync("role");
       if (role !== "teacher") {
         try {
-          const res = await common_vendor.wx$1.cloud.callFunction({ name: "getRole" });
-          const r = res && res.result ? res.result : {};
+          const r = await utils_cloud.fetchRole();
           role = r.role;
-          if (role === "teacher")
-            common_vendor.index.setStorageSync("role", "teacher");
         } catch (err) {
           common_vendor.index.__f__("error", "at pages/admin/admin.vue:136", err);
         }
@@ -68,7 +66,7 @@ const _sfc_main = {
         }
       });
     },
-    parseExcel(filePath) {
+    async parseExcel(filePath) {
       common_vendor.index.showLoading({ title: "解析中..." });
       try {
         const raw = common_vendor.wx$1.getFileSystemManager().readFileSync(filePath);
@@ -96,23 +94,54 @@ const _sfc_main = {
           common_vendor.index.hideLoading();
           common_vendor.index.showModal({
             title: "格式不正确",
-            content: `未找到"姓名"、"手机号"或"核验码"列。检测到的列名：${keys.join("、")}`,
+            content: `未找到“姓名”、“手机号”或“密码”列。检测到的列名：${keys.join("、")}`,
             showCancel: false
           });
           return;
         }
-        const students = data.map((row) => ({
+        const parsedRows = data.map((row, index) => ({
+          rowNumber: index + 2,
           name: (row[nameKey] || "").toString().trim(),
-          phone: (row[phoneKey] || "").toString().trim(),
-          code: (row[codeKey] || "").toString().trim()
-        })).filter((s) => s.name && s.phone && s.code);
+          phone: (row[phoneKey] || "").toString().replace(/\s+/g, ""),
+          code: (row[codeKey] || "").toString().trim().replace(/^\d{1,4}$/, (value) => value.padStart(4, "0"))
+        }));
+        const invalidCodeRows = parsedRows.filter((s) => !/^\d{4}$/.test(s.code));
+        const missingIdentityRows = parsedRows.filter((s) => !s.name || !s.phone);
+        const students = parsedRows.filter((s) => s.name && s.phone && /^\d{4}$/.test(s.code));
+        const duplicateKeys = /* @__PURE__ */ new Set();
+        const duplicateRows = students.filter((s) => {
+          const key = `${s.name}__${s.phone}`;
+          const duplicate = duplicateKeys.has(key);
+          duplicateKeys.add(key);
+          return duplicate;
+        });
+        if (invalidCodeRows.length || missingIdentityRows.length || duplicateRows.length) {
+          const details = [
+            invalidCodeRows.length ? `密码不是4位数字（第${invalidCodeRows.map((s) => s.rowNumber).join("、")}行，不导入）` : "",
+            missingIdentityRows.length ? `姓名或手机号为空（第${missingIdentityRows.map((s) => s.rowNumber).join("、")}行，不导入）` : "",
+            duplicateRows.length ? `姓名和手机号同时重复（第${duplicateRows.map((s) => s.rowNumber).join("、")}行，后面的记录覆盖前面的记录）` : ""
+          ].filter(Boolean).join("；");
+          const confirmed = await new Promise((resolve) => {
+            common_vendor.index.showModal({
+              title: "导入数据提示",
+              content: `${details}。是否继续导入？`,
+              confirmText: "继续导入",
+              cancelText: "取消",
+              success: (res) => resolve(res.confirm)
+            });
+          });
+          if (!confirmed) {
+            common_vendor.index.hideLoading();
+            return;
+          }
+        }
         this.parsedStudents = students;
         this.previewList = students.slice(0, 5);
         common_vendor.index.hideLoading();
         common_vendor.index.showToast({ title: `解析到 ${students.length} 条数据`, icon: "success" });
       } catch (err) {
         common_vendor.index.hideLoading();
-        common_vendor.index.__f__("error", "at pages/admin/admin.vue:236", "解析Excel失败:", err);
+        common_vendor.index.__f__("error", "at pages/admin/admin.vue:267", "解析Excel失败:", err);
         common_vendor.index.showToast({ title: "解析失败，请检查文件格式", icon: "none", duration: 2e3 });
       }
     },
@@ -129,28 +158,27 @@ const _sfc_main = {
       }
       let successCount = 0;
       let skipCount = 0;
+      let updateCount = 0;
       let appendedToSession = 0;
       let failedChunks = 0;
       common_vendor.index.showLoading({ title: `上传中 0/${total}`, mask: true });
       for (let idx = 0; idx < chunks.length; idx++) {
         const chunk = chunks[idx];
         try {
-          const res = await common_vendor.wx$1.cloud.callFunction({
-            name: "uploadStudents",
-            data: { students: chunk }
-          });
+          const res = await utils_cloud.callFunction("uploadStudents", { students: chunk });
           const r = res && res.result ? res.result : {};
           if (r.success) {
             successCount += r.successCount || 0;
             skipCount += r.skipCount || 0;
+            updateCount += r.updateCount || 0;
             appendedToSession += r.appendedToSession || 0;
           } else {
             failedChunks++;
-            common_vendor.index.__f__("warn", "at pages/admin/admin.vue:275", "[uploadStudents] 分片失败:", r.message);
+            common_vendor.index.__f__("warn", "at pages/admin/admin.vue:305", "[uploadStudents] 分片失败:", r.message);
           }
         } catch (err) {
           failedChunks++;
-          common_vendor.index.__f__("error", "at pages/admin/admin.vue:279", "[uploadStudents] 分片异常:", err);
+          common_vendor.index.__f__("error", "at pages/admin/admin.vue:309", "[uploadStudents] 分片异常:", err);
         }
         const done = Math.min((idx + 1) * CHUNK_SIZE, total);
         common_vendor.index.showLoading({ title: `上传中 ${done}/${total}`, mask: true });
@@ -190,21 +218,18 @@ const _sfc_main = {
         common_vendor.index.showToast({ title: "请输入手机号", icon: "none" });
         return;
       }
-      if (!this.manualCode.trim()) {
-        common_vendor.index.showToast({ title: "请输入核验码", icon: "none" });
+      if (!/^\d{4}$/.test(this.manualCode.trim())) {
+        common_vendor.index.showToast({ title: "请输入4位数字密码", icon: "none" });
         return;
       }
       this.isAdding = true;
       try {
-        const res = await common_vendor.wx$1.cloud.callFunction({
-          name: "uploadStudents",
-          data: {
-            students: [{
-              name: this.manualName.trim(),
-              phone: this.manualPhone.trim(),
-              code: this.manualCode.trim()
-            }]
-          }
+        const res = await utils_cloud.callFunction("uploadStudents", {
+          students: [{
+            name: this.manualName.trim(),
+            phone: this.manualPhone.replace(/\s+/g, ""),
+            code: this.manualCode.trim()
+          }]
         });
         if (res.result.success) {
           common_vendor.index.showToast({ title: "添加成功", icon: "success" });
@@ -215,7 +240,7 @@ const _sfc_main = {
           common_vendor.index.showToast({ title: res.result.message || "添加失败", icon: "none" });
         }
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/admin/admin.vue:350", err);
+        common_vendor.index.__f__("error", "at pages/admin/admin.vue:377", err);
         common_vendor.index.showToast({ title: "添加失败", icon: "none" });
       }
       this.isAdding = false;
@@ -224,7 +249,7 @@ const _sfc_main = {
 };
 function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
   return common_vendor.e({
-    a: common_vendor.o((...args) => $options.chooseExcel && $options.chooseExcel(...args), "ba"),
+    a: common_vendor.o((...args) => $options.chooseExcel && $options.chooseExcel(...args), "d3"),
     b: $data.selectedFile
   }, $data.selectedFile ? {
     c: common_vendor.t($data.selectedFile.name),
@@ -247,17 +272,17 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
     i: common_vendor.t($data.parsedStudents.length)
   } : {}, {
     j: common_vendor.t($data.isUploading ? "上传中..." : "确认上传"),
-    k: common_vendor.o((...args) => $options.uploadStudents && $options.uploadStudents(...args), "20"),
+    k: common_vendor.o((...args) => $options.uploadStudents && $options.uploadStudents(...args), "06"),
     l: $data.isUploading
   }) : {}, {
     m: $data.manualName,
-    n: common_vendor.o(($event) => $data.manualName = $event.detail.value, "ed"),
+    n: common_vendor.o(($event) => $data.manualName = $event.detail.value, "ab"),
     o: $data.manualPhone,
-    p: common_vendor.o(($event) => $data.manualPhone = $event.detail.value, "5c"),
+    p: common_vendor.o(($event) => $data.manualPhone = $event.detail.value, "71"),
     q: $data.manualCode,
-    r: common_vendor.o(($event) => $data.manualCode = $event.detail.value, "9a"),
+    r: common_vendor.o(($event) => $data.manualCode = $event.detail.value, "4b"),
     s: common_vendor.t($data.isAdding ? "添加中..." : "添加学生"),
-    t: common_vendor.o((...args) => $options.addManual && $options.addManual(...args), "a2"),
+    t: common_vendor.o((...args) => $options.addManual && $options.addManual(...args), "0b"),
     v: $data.isAdding
   });
 }

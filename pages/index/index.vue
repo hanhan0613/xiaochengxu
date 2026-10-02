@@ -61,6 +61,8 @@
 </template>
 
 <script>
+import { fetchRole, claimTeacher } from '@/utils/cloud.js'
+
 export default {
   data() {
     return {
@@ -100,12 +102,9 @@ export default {
     async goTeacher() {
       uni.showLoading({ title: '验证身份...' })
       try {
-        const res = await wx.cloud.callFunction({ name: 'getRole' })
+        const r = await fetchRole()
         uni.hideLoading()
-        const r = res && res.result ? res.result : {}
         if (r.success && r.role === 'teacher') {
-          uni.setStorageSync('role', 'teacher')
-          uni.setStorageSync('openid', r.openid)
           uni.navigateTo({ url: '/pages/teacher/teacher' })
         } else {
           // 非教师，弹出密码验证
@@ -128,14 +127,8 @@ export default {
       }
       this.authLoading = true
       try {
-        const res = await wx.cloud.callFunction({
-          name: 'claimTeacher',
-          data: { password: this.authPassword.trim() }
-        })
-        const r = res && res.result ? res.result : {}
+        const r = await claimTeacher(this.authPassword.trim())
         if (r.success) {
-          uni.setStorageSync('role', 'teacher')
-          uni.setStorageSync('openid', r.openid)
           uni.showToast({ title: '验证成功', icon: 'success' })
           setTimeout(() => {
             this.showTeacherAuth = false

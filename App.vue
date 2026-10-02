@@ -1,41 +1,21 @@
 <script>
-// 模块级函数，避免依赖 this.methods（App.vue 在 uni-app Vue3 中不一定支持）
-async function fetchRole(globalData) {
-  try {
-    const res = await wx.cloud.callFunction({ name: 'getRole' })
-    const r = res && res.result ? res.result : {}
-    if (r.success) {
-      globalData.role = r.role
-      globalData.openid = r.openid
-      uni.setStorageSync('role', r.role)
-      uni.setStorageSync('openid', r.openid)
-      console.log('[role]', r.role, '[openid]', r.openid)
-    } else {
-      console.warn('[getRole] result not success:', r)
-    }
-  } catch (err) {
-    console.error('获取角色失败:', err)
-  }
-}
+import { fetchRole } from '@/utils/cloud.js'
 
 export default {
-  onLaunch() {
-    if (!wx.cloud) {
-      console.error('请使用 2.2.3 或以上的基础库以使用云能力')
-      return
-    }
+  async onLaunch() {
+    // 启动时获取当前用户角色并缓存 openid（失败不影响启动）
     try {
-      wx.cloud.init({
-        env: 'cloud1-7gl718wp38e9e33c',
-        traceUser: true
-      })
-      console.log('[cloud] init ok')
-    } catch (e) {
-      console.error('[cloud] init failed:', e)
-      return
+      const r = await fetchRole()
+      if (r && r.success) {
+        this.globalData.role = r.role
+        this.globalData.openid = r.openid
+        console.log('[role]', r.role, '[openid]', r.openid)
+      } else {
+        console.warn('[getRole] result not success:', r)
+      }
+    } catch (err) {
+      console.error('获取角色失败:', err)
     }
-    // 启动时获取当前用户角色（失败不影响启动）
-    fetchRole(this.globalData)
   },
   globalData: {
     userInfo: null,

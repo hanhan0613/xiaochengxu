@@ -1,5 +1,6 @@
 "use strict";
 const common_vendor = require("../../common/vendor.js");
+const utils_cloud = require("../../utils/cloud.js");
 const _sfc_main = {
   data() {
     return {
@@ -60,11 +61,8 @@ const _sfc_main = {
       let role = common_vendor.index.getStorageSync("role");
       if (role !== "teacher") {
         try {
-          const res = await common_vendor.wx$1.cloud.callFunction({ name: "getRole" });
-          const r = res && res.result ? res.result : {};
+          const r = await utils_cloud.fetchRole();
           role = r.role;
-          if (role === "teacher")
-            common_vendor.index.setStorageSync("role", "teacher");
         } catch (err) {
           common_vendor.index.__f__("error", "at pages/sessions/sessions.vue:199", err);
         }
@@ -85,10 +83,7 @@ const _sfc_main = {
         return;
       this.isLoading = true;
       try {
-        const res = await common_vendor.wx$1.cloud.callFunction({
-          name: "listSessions",
-          data: { page: 1, pageSize: 50 }
-        });
+        const res = await utils_cloud.callFunction("listSessions", { page: 1, pageSize: 50 });
         const r = res && res.result ? res.result : {};
         if (r.success) {
           this.sessions = r.data || [];
@@ -96,7 +91,7 @@ const _sfc_main = {
           common_vendor.index.showToast({ title: r.message || "加载失败", icon: "none" });
         }
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/sessions/sessions.vue:228", err);
+        common_vendor.index.__f__("error", "at pages/sessions/sessions.vue:225", err);
         common_vendor.index.showToast({ title: "加载失败", icon: "none" });
       }
       this.isLoading = false;
@@ -104,10 +99,7 @@ const _sfc_main = {
     async openDetail(session) {
       common_vendor.index.showLoading({ title: "加载详情..." });
       try {
-        const res = await common_vendor.wx$1.cloud.callFunction({
-          name: "getSessionDetail",
-          data: { sessionId: session._id }
-        });
+        const res = await utils_cloud.callFunction("getSessionDetail", { sessionId: session._id });
         common_vendor.index.hideLoading();
         const r = res && res.result ? res.result : {};
         if (r.success) {
@@ -127,7 +119,7 @@ const _sfc_main = {
         }
       } catch (err) {
         common_vendor.index.hideLoading();
-        common_vendor.index.__f__("error", "at pages/sessions/sessions.vue:261", err);
+        common_vendor.index.__f__("error", "at pages/sessions/sessions.vue:255", err);
         common_vendor.index.showToast({ title: "加载失败", icon: "none" });
       }
     },
@@ -147,10 +139,7 @@ const _sfc_main = {
             return;
           common_vendor.index.showLoading({ title: "删除中...", mask: true });
           try {
-            const cloudRes = await common_vendor.wx$1.cloud.callFunction({
-              name: "deleteSession",
-              data: { sessionId: session._id }
-            });
+            const cloudRes = await utils_cloud.callFunction("deleteSession", { sessionId: session._id });
             common_vendor.index.hideLoading();
             const r = cloudRes && cloudRes.result ? cloudRes.result : {};
             if (r.success) {
@@ -161,7 +150,7 @@ const _sfc_main = {
             }
           } catch (err) {
             common_vendor.index.hideLoading();
-            common_vendor.index.__f__("error", "at pages/sessions/sessions.vue:300", err);
+            common_vendor.index.__f__("error", "at pages/sessions/sessions.vue:291", err);
             common_vendor.index.showToast({ title: "网络错误", icon: "none" });
           }
         }

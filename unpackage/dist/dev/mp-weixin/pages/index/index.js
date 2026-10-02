@@ -1,5 +1,6 @@
 "use strict";
 const common_vendor = require("../../common/vendor.js");
+const utils_cloud = require("../../utils/cloud.js");
 const _sfc_main = {
   data() {
     return {
@@ -38,19 +39,16 @@ const _sfc_main = {
     async goTeacher() {
       common_vendor.index.showLoading({ title: "验证身份..." });
       try {
-        const res = await common_vendor.wx$1.cloud.callFunction({ name: "getRole" });
+        const r = await utils_cloud.fetchRole();
         common_vendor.index.hideLoading();
-        const r = res && res.result ? res.result : {};
         if (r.success && r.role === "teacher") {
-          common_vendor.index.setStorageSync("role", "teacher");
-          common_vendor.index.setStorageSync("openid", r.openid);
           common_vendor.index.navigateTo({ url: "/pages/teacher/teacher" });
         } else {
           this.showTeacherAuth = true;
         }
       } catch (err) {
         common_vendor.index.hideLoading();
-        common_vendor.index.__f__("error", "at pages/index/index.vue:116", err);
+        common_vendor.index.__f__("error", "at pages/index/index.vue:115", err);
         common_vendor.index.showToast({ title: "网络错误，请重试", icon: "none" });
       }
     },
@@ -65,14 +63,8 @@ const _sfc_main = {
       }
       this.authLoading = true;
       try {
-        const res = await common_vendor.wx$1.cloud.callFunction({
-          name: "claimTeacher",
-          data: { password: this.authPassword.trim() }
-        });
-        const r = res && res.result ? res.result : {};
+        const r = await utils_cloud.claimTeacher(this.authPassword.trim());
         if (r.success) {
-          common_vendor.index.setStorageSync("role", "teacher");
-          common_vendor.index.setStorageSync("openid", r.openid);
           common_vendor.index.showToast({ title: "验证成功", icon: "success" });
           setTimeout(() => {
             this.showTeacherAuth = false;
@@ -86,7 +78,7 @@ const _sfc_main = {
         }
       } catch (err) {
         this.authLoading = false;
-        common_vendor.index.__f__("error", "at pages/index/index.vue:152", err);
+        common_vendor.index.__f__("error", "at pages/index/index.vue:145", err);
         common_vendor.index.showToast({ title: "网络错误，请重试", icon: "none" });
       }
     }

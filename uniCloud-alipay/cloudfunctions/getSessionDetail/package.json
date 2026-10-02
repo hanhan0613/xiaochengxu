@@ -1,0 +1,6 @@
+{
+  "name": "getSessionDetail",
+  "version": "1.0.0",
+  "description": "获取单个活动详情",
+  "main": "index.js"
+}

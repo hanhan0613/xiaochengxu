@@ -1,0 +1,6 @@
+{
+  "name": "getStudents",
+  "version": "1.0.0",
+  "description": "获取学生列表（教师专属）",
+  "main": "index.js"
+}

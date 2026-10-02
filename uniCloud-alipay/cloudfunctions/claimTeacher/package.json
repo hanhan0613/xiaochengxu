@@ -1,0 +1,6 @@
+{
+  "name": "claimTeacher",
+  "version": "1.0.0",
+  "description": "凭密码绑定当前 openid 为教师",
+  "main": "index.js"
+}

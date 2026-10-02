@@ -161,6 +161,8 @@
 </template>
 
 <script>
+import { callFunction, fetchRole } from '@/utils/cloud.js'
+
 export default {
   data() {
     return {
@@ -177,6 +179,7 @@ export default {
       newSessionTitle: '',
       clearStudentsOption: false,
       newSessionLoading: false,
+      isScanning: false,
       _lastTapInfo: { id: '', time: 0 }
     }
   },
@@ -226,10 +229,8 @@ export default {
       let role = uni.getStorageSync('role')
       if (role !== 'teacher') {
         try {
-          const res = await wx.cloud.callFunction({ name: 'getRole' })
-          const r = res && res.result ? res.result : {}
+          const r = await fetchRole()
           role = r.role
-          if (role === 'teacher') uni.setStorageSync('role', 'teacher')
         } catch (err) {
           console.error(err)
         }
@@ -267,7 +268,7 @@ export default {
           if (!res.confirm) return
           uni.showLoading({ title: '结束中...', mask: true })
           try {
-            const cloudRes = await wx.cloud.callFunction({ name: 'endSession' })
+            const cloudRes = await callFunction('endSession')
             uni.hideLoading()
             const r = cloudRes && cloudRes.result ? cloudRes.result : {}
             if (r.success) {
@@ -287,7 +288,7 @@ export default {
 
     async loadCurrentSession() {
       try {
-        const res = await wx.cloud.callFunction({ name: 'getCurrentSession' })
+        const res = await callFunction('getCurrentSession')
         const r = res && res.result ? res.result : {}
         if (r.success) {
           this.currentSession = r.session
@@ -329,12 +330,9 @@ export default {
 
       this.newSessionLoading = true
       try {
-        const cloudRes = await wx.cloud.callFunction({
-          name: 'startSession',
-          data: {
-            title: this.newSessionTitle.trim(),
-            clearStudents: this.clearStudentsOption
-          }
+        const cloudRes = await callFunction('startSession', {
+          title: this.newSessionTitle.trim(),
+          clearStudents: this.clearStudentsOption
         })
         const r = cloudRes && cloudRes.result ? cloudRes.result : {}
         if (r.success) {
@@ -360,9 +358,10 @@ export default {
       this.isLoading = true
 
       try {
-        const res = await wx.cloud.callFunction({
-          name: 'getStudents',
-          data: { page, pageSize: this.pageSize, filter: this.filter }
+        const res = await callFunction('getStudents', {
+          page,
+          pageSize: this.pageSize,
+          filter: this.filter
         })
 
         if (res.result.success) {
@@ -412,24 +411,50 @@ export default {
 
     parseQRContent(raw) {
       // 兼容两种格式：
-      // 1. 新格式 CKIN|{studentId}|{timestamp}
+      // 1. 新格式 CKIN|{studentId}|{token}
       // 2. 旧格式 JSON {type:'checkin', studentId, timestamp}
       if (typeof raw !== 'string') return null
       if (raw.startsWith('CKIN|')) {
         const parts = raw.split('|')
         if (parts.length < 3) return null
-        return { studentId: parts[1], timestamp: Number(parts[2]) }
+        return { studentId: parts[1], token: parts[2] }
       }
       try {
         const obj = JSON.parse(raw)
         if (obj && obj.type === 'checkin' && obj.studentId) {
-          return { studentId: obj.studentId, timestamp: Number(obj.timestamp) || 0 }
+          return { studentId: obj.studentId, token: obj.token || '' }
         }
       } catch (e) {}
       return null
     },
 
+    updateLocalCheckIn(studentId) {
+      const now = Date.now()
+      this.students = this.students.map((item) => {
+        if (item._id !== studentId || item.checkedIn) return item
+        return Object.assign({}, item, {
+          checkedIn: true,
+          checkInTime: now,
+          checkInTimeStr: this.formatTime(new Date(now))
+        })
+      })
+      this.stats.checked = Math.min(this.stats.total, this.stats.checked + 1)
+      this.stats.unchecked = Math.max(0, this.stats.total - this.stats.checked)
+      if (this.currentSession) {
+        this.currentSession.checkedCount = Math.min(
+          this.currentSession.totalStudents,
+          (this.currentSession.checkedCount || 0) + 1
+        )
+      }
+    },
+
+    continueScanning() {
+      setTimeout(() => this.scanQRCode(), 300)
+    },
+
     scanQRCode() {
+      if (this.isScanning) return
+      this.isScanning = true
       uni.scanCode({
         onlyFromCamera: true,
         scanType: ['qrCode'],
@@ -440,21 +465,16 @@ export default {
             if (!qrData || !qrData.studentId) {
               this.scanResult = { success: false, message: '无效的签到二维码' }
               setTimeout(() => { this.scanResult = null }, 3000)
-              return
-            }
-
-            const now = Date.now()
-            if (qrData.timestamp && now - qrData.timestamp > 5 * 60 * 1000) {
-              this.scanResult = { success: false, message: '二维码已过期，请让学生重新生成' }
-              setTimeout(() => { this.scanResult = null }, 3000)
+              this.isScanning = false
+              this.continueScanning()
               return
             }
 
             uni.showLoading({ title: '签到中...' })
 
-            const checkInRes = await wx.cloud.callFunction({
-              name: 'checkIn',
-              data: { studentId: qrData.studentId }
+            const checkInRes = await callFunction('checkIn', {
+              studentId: qrData.studentId,
+              qrToken: qrData.token
             })
 
             uni.hideLoading()
@@ -462,18 +482,23 @@ export default {
 
             if (checkInRes.result.success) {
               uni.showToast({ title: '签到成功！', icon: 'success' })
-              this.loadCurrentSession()
-              this.loadStudents(true)
+              this.updateLocalCheckIn(qrData.studentId)
             }
 
             setTimeout(() => { this.scanResult = null }, 3000)
+            this.isScanning = false
+            this.continueScanning()
           } catch (err) {
+            uni.hideLoading()
             console.error('扫码处理失败:', err)
             this.scanResult = { success: false, message: '扫码处理失败' }
             setTimeout(() => { this.scanResult = null }, 3000)
+            this.isScanning = false
+            this.continueScanning()
           }
         },
         fail: (err) => {
+          this.isScanning = false
           if (err.errMsg && err.errMsg.indexOf('cancel') === -1) {
             uni.showToast({ title: '扫码失败', icon: 'none' })
           }

@@ -7,7 +7,7 @@
           <text class="login-icon-text">&#x1F393;</text>
         </view>
         <text class="page-title">学生签到</text>
-        <text class="page-subtitle">输入姓名、手机号和核验码，生成签到码</text>
+        <text class="page-subtitle">输入姓名、手机号和密码，生成签到码</text>
       </view>
 
       <view class="card">
@@ -35,11 +35,12 @@
         </view>
 
         <view class="input-group">
-          <text class="input-label">核验码</text>
+          <text class="input-label">密码</text>
           <input
             class="input-field"
-            type="text"
-            placeholder="输入核验码"
+            type="number"
+            placeholder="输入4位数字密码"
+            maxlength="4"
             placeholder-class="input-placeholder"
             :adjust-position="true"
             v-model="code"
@@ -128,6 +129,7 @@
 
 <script>
 import QRCode from '@/utils/qrcode.js'
+import { callFunction } from '@/utils/cloud.js'
 
 export default {
   data() {
@@ -148,12 +150,12 @@ export default {
         '本小程序为学生课堂签到打卡服务，提供学生端二维码生成、教师端扫码签到、签到历史查询等功能。',
         '',
         '二、用户行为规范',
-        '1. 您应如实填写姓名、手机号和核验码，不得冒用他人身份。',
+        '1. 您应如实填写姓名、手机号和密码，不得冒用他人身份。',
         '2. 请勿将签到二维码用于作弊、代签等违反学校规定的行为。',
         '3. 请勿对本小程序进行逆向工程、干扰正常服务。',
         '',
         '三、信息收集与使用',
-        '1. 我们仅收集实现签到功能所必需的信息：姓名、手机号、核验码、微信账号标识（openid）。',
+        '1. 我们仅收集实现签到功能所必需的信息：姓名、手机号、密码、微信账号标识（openid）。',
         '2. 上述信息仅用于签到业务，不会用于其他目的，也不会向第三方提供。',
         '3. 详细的个人信息处理规则请查阅《隐私政策》。',
         '',
@@ -180,10 +182,6 @@ export default {
         : phoneStr
 
       // 只有未签到时才生成二维码
-      if (!cached.checkedIn) {
-        setTimeout(() => { this.generateQRCode(cached._id) }, 300)
-      }
-
       this.refreshStatus()
     }
   },
@@ -227,22 +225,19 @@ export default {
         uni.showToast({ title: '请输入手机号', icon: 'none' })
         return
       }
-      if (!this.code.trim()) {
-        uni.showToast({ title: '请输入核验码', icon: 'none' })
+      if (!/^\d{4}$/.test(this.code.trim())) {
+        uni.showToast({ title: '请输入4位数字密码', icon: 'none' })
         return
       }
 
       this.isLoading = true
 
       try {
-        const res = await wx.cloud.callFunction({
-          name: 'login',
-          data: {
-            name: this.name.trim(),
-            phone: this.phone.trim(),
-            code: this.code.trim()
-          }
-        })
+        const res = await callFunction('login', {
+          name: this.name.trim(),
+          phone: this.phone.replace(/\s+/g, ''),
+          code: this.code.trim()
+        }, { withOpenid: false })
 
         const result = res && res.result ? res.result : {}
 
@@ -263,7 +258,7 @@ export default {
 
           // 已签到就不生成二维码，直接显示"已签到"大字
           if (!student.checkedIn) {
-            setTimeout(() => { this.generateQRCode(student._id) }, 300)
+            setTimeout(() => { this.generateQRCode(student._id, student.qrToken) }, 300)
           }
         } else {
           const msg = result.message || '登录失败，请检查姓名和手机号是否正确'
@@ -278,7 +273,7 @@ export default {
       }
     },
 
-    generateQRCode(studentId) {
+    generateQRCode(studentId, qrToken) {
       const query = uni.createSelectorQuery().in(this)
       query.select('#qrCanvas')
         .fields({ node: true, size: true })
@@ -296,7 +291,7 @@ export default {
           ctx.scale(dpr, dpr)
 
           // 用紧凑格式，字符越少二维码越简单，扫码成功率越高
-          const qrData = `CKIN|${studentId}|${Date.now()}`
+          const qrData = `CKIN|${studentId}|${qrToken}`
           QRCode.draw(qrData, canvas, ctx, 500)
         })
     },
@@ -316,16 +311,13 @@ export default {
       uni.showLoading({ title: '刷新中...' })
 
       try {
-        const res = await wx.cloud.callFunction({
-          name: 'login',
-          data: {
-            name: this.studentInfo.name,
-            phone: this.studentInfo.phone,
-            code: this.studentInfo.code
-          }
-        })
+        const res = await callFunction('login', {
+          name: this.studentInfo.name,
+          phone: String(this.studentInfo.phone || '').replace(/\s+/g, ''),
+          code: this.studentInfo.code
+        }, { withOpenid: false })
 
-        if (res.result.success) {
+        if (res.result.success && res.result.student) {
           const refreshed = Object.assign({}, res.result.student, { code: this.studentInfo.code })
           this.studentInfo = refreshed
           uni.setStorageSync('studentInfo', refreshed)
@@ -333,12 +325,27 @@ export default {
           // 只要刷新后是未签到，就生成二维码
           // （覆盖"从未签到→未签到"和"从已签到被重置→未签到"两种情况）
           if (!res.result.student.checkedIn) {
-            setTimeout(() => { this.generateQRCode(res.result.student._id) }, 300)
+            setTimeout(() => {
+              this.generateQRCode(res.result.student._id, res.result.student.qrToken)
+            }, 300)
           }
           // 刷新后是已签到，页面自动切换到"已签到"视图，不需要二维码
+        } else {
+          uni.removeStorageSync('studentInfo')
+          this.isLoggedIn = false
+          this.studentInfo = null
+          this.phoneDisplay = ''
+          this.name = ''
+          this.phone = ''
+          this.code = ''
+          uni.showToast({ title: '学生信息已更新，请重新登录', icon: 'none' })
         }
       } catch (err) {
         console.error(err)
+        uni.removeStorageSync('studentInfo')
+        this.isLoggedIn = false
+        this.studentInfo = null
+        this.phoneDisplay = ''
       }
 
       uni.hideLoading()
